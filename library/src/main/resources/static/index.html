@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Thư viện - Demo Tuần 40 & 41</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container py-4">
+
+    <h2 class="mb-4">Hệ Thống Quản Lý Thư Viện & Tồn Kho (Spring Boot 3 + JWT)</h2>
+
+    <!-- Section 1: Auth -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card p-3 shadow-sm">
+                <h4>Đăng nhập</h4>
+                <div class="mb-2">
+                    <label>Email:</label>
+                    <input type="email" id="loginEmail" class="form-control" value="admin@library.com">
+                </div>
+                <div class="mb-2">
+                    <label>Mật khẩu:</label>
+                    <input type="password" id="loginPassword" class="form-control" value="123456">
+                </div>
+                <button class="btn btn-primary" onclick="login()">Đăng nhập</button>
+                <div id="loginStatus" class="mt-2 text-info"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Book Management -->
+    <div class="card p-3 shadow-sm mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>Danh sách Sách & Tồn kho</h4>
+            <button class="btn btn-success" onclick="loadBooks()">Tải danh sách sách</button>
+        </div>
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tên sách</th>
+                    <th>Tổng SL</th>
+                    <th>Khả dụng (Tồn)</th>
+                    <th>Giá Thuê</th>
+                    <th>Giá Bán</th>
+                    <th>Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody id="bookTableBody">
+                <tr><td colspan="7" class="text-center">Bấm "Tải danh sách sách" để xem dữ liệu.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let jwtToken = '';
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const res = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (!res.ok) throw new Error('Đăng nhập thất bại!');
+                const data = await res.json();
+                jwtToken = data.token;
+                document.getElementById('loginStatus').innerText = 'Đăng nhập thành công! Token đã được lưu.';
+            } catch (err) {
+                document.getElementById('loginStatus').innerText = err.message;
+            }
+        }
+
+        async function loadBooks() {
+            if (!jwtToken) {
+                alert('Vui lòng đăng nhập trước!');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/v1/books', {
+                    headers: { 'Authorization': 'Bearer ' + jwtToken }
+                });
+                const books = await res.json();
+
+                const tbody = document.getElementById('bookTableBody');
+                tbody.innerHTML = '';
+                books.forEach(b => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${b.id}</td>
+                            <td>${b.title}</td>
+                            <td>${b.totalQuantity}</td>
+                            <td><strong class="text-primary">${b.availableQuantity}</strong></td>
+                            <td>${b.rentalPrice.toLocaleString()} đ</td>
+                            <td>${b.salePrice.toLocaleString()} đ</td>
+                            <td><span class="badge ${b.status === 'AVAILABLE' ? 'bg-success' : 'bg-danger'}">${b.status}</span></td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                alert('Không thể tải danh sách sách: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>
