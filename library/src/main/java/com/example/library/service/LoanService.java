@@ -2,6 +2,7 @@ package com.example.library.service;
 
 import com.example.library.dto.LoanCreateRequest;
 import com.example.library.dto.LoanItemRequest;
+import com.example.library.dto.LoanReturnRequest;
 import com.example.library.entity.*;
 import com.example.library.exception.ResourceNotFoundException;
 import com.example.library.repository.*;
@@ -93,43 +94,62 @@ public class LoanService {
 
     @Transactional
     public Loan returnLoan(Long loanId) {
+        LoanReturnRequest request = new LoanReturnRequest();
+        request.setCondition(BookReturnCondition.NORMAL);
+        return returnLoan(loanId, request);
+    }
+
+    @Transactional
+    public Loan returnLoan(Long loanId, LoanReturnRequest request) {
         Loan loan = loanRepository.findById(loanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mượn ID: " + loanId));
 
         if (loan.getStatus() == LoanStatus.RETURNED) {
-            throw new RuntimeException("Phiếu mượn này đã được trả trước đó!");
+            throw new IllegalStateException("Phiếu mượn này đã được trả trước đó!");
         }
+
+        BookReturnCondition condition = request == null || request.getCondition() == null
+                ? BookReturnCondition.NORMAL : request.getCondition();
 
         LocalDate today = LocalDate.now();
         loan.setReturnDate(today);
         loan.setStatus(LoanStatus.RETURNED);
 
-        // Calculate fine if overdue (10,000 VND / day per item)
-        long overdueDays = ChronoUnit.DAYS.between(loan.getDueDate(), today);
-        if (overdueDays > 0) {
-            int totalBooks = loan.getItems().stream().mapToInt(LoanItem::getQuantity).sum();
-            BigDecimal fineCalc = BigDecimal.valueOf(overdueDays * 10000L * totalBooks);
-            loan.setFineAmount(fineCalc);
+        long overdueDays = Math.max(0, ChronoUnit.DAYS.between(loan.getDueDate(), today));
+        int totalBooks = loan.getItems().stream().mapToInt(LoanItem::getQuantity).sum();
+        BigDecimal overdueFine = BigDecimal.valueOf(overdueDays * 10000L * totalBooks);
+        BigDecimal conditionFine = BigDecimal.ZERO;
 
-            Fine fine = Fine.builder()
-                    .loan(loan)
-                    .amount(fineCalc)
-                    .reason("Trả sách quá hạn " + overdueDays + " ngày")
-                    .paid(false)
-                    .build();
-            fineRepository.save(fine);
+        if (condition == BookReturnCondition.DAMAGED) {
+            conditionFine = BigDecimal.valueOf(50000L * totalBooks);
+        } else if (condition == BookReturnCondition.LOST) {
+            conditionFine = loan.getItems().stream()
+                    .map(item -> item.getBook().getSalePrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
 
-        // Return books to inventory
-        for (LoanItem item : loan.getItems()) {
-            Book book = item.getBook();
-            book.setAvailableQuantity(book.getAvailableQuantity() + item.getQuantity());
-            if (book.getAvailableQuantity() > 0) {
-                book.setStatus(BookStatus.AVAILABLE);
+        BigDecimal totalFine = overdueFine.add(conditionFine);
+        loan.setFineAmount(totalFine);
+
+        if (totalFine.compareTo(BigDecimal.ZERO) > 0) {
+            String reason = "Phạt trả quá hạn: " + overdueDays + " ngày";
+            if (condition == BookReturnCondition.DAMAGED) reason += "; sách bị hỏng";
+            if (condition == BookReturnCondition.LOST) reason += "; sách bị mất";
+            if (request != null && request.getNote() != null && !request.getNote().isBlank()) {
+                reason += "; ghi chú: " + request.getNote().trim();
             }
-            bookRepository.save(book);
+            fineRepository.save(Fine.builder().loan(loan).amount(totalFine).reason(reason).paid(false).build());
         }
 
+        // Chỉ sách nguyên vẹn mới được cộng lại số lượng sẵn có trong kho.
+        if (condition == BookReturnCondition.NORMAL) {
+            for (LoanItem item : loan.getItems()) {
+                Book book = item.getBook();
+                book.setAvailableQuantity(book.getAvailableQuantity() + item.getQuantity());
+                if (book.getAvailableQuantity() > 0) book.setStatus(BookStatus.AVAILABLE);
+                bookRepository.save(book);
+            }
+        }
         return loanRepository.save(loan);
     }
 }
