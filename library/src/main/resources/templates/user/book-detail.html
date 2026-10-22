@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title th:text="${pageTitle} ?: 'mộc. — Thư viện của bạn'">mộc. — Thư viện của bạn</title>
+<link rel="stylesheet" th:href="@{/css/user.css}">
+</head><body>
+<header class="topbar"><a class="brand" th:href="@{/user}"><span class="brand-icon">▣</span><span><b>mộc.</b><small>THƯ VIỆN CỦA BẠN</small></span></a>
+<nav><a th:href="@{/user}" class="nav-link">Trang chủ</a><a th:href="@{/user/books}" class="nav-link">Khám phá sách</a><a th:href="@{/user/borrowed}" class="nav-link">Sách đang mượn</a><a th:href="@{/user/history}" class="nav-link">Lịch sử</a></nav>
+<div class="user-actions"><a class="login-link" th:href="@{/user/login}">Đăng nhập</a></div></header>
+<main class="container">
+<a class="back-link" th:href="@{/user/books}">← Quay lại bộ sưu tập</a><section class="detail-layout"><div class="detail-cover book-cover"><small>MỘC · TUYỂN CHỌN</small><div class="cover-symbol">♧</div><h3 th:text="${book.title}">Tên sách</h3><p th:text="${book.author != null ? book.author.name : 'Tác giả chưa cập nhật'}">Tác giả</p><span class="cover-initial" th:text="${#strings.substring(book.title,0,1)}">B</span></div><div class="detail-info"><div class="eyebrow" th:text="${book.category != null ? book.category.name : 'SÁCH TRONG THƯ VIỆN'}">THỂ LOẠI</div><h1 th:text="${book.title}">Tên sách</h1><p class="detail-author" th:text="${book.author != null ? book.author.name : 'Đang cập nhật tác giả'}">Tác giả</p><div class="detail-rule"></div><dl><dt>Mã sách</dt><dd th:text="${book.isbn ?: 'Chưa cập nhật'}">ISBN</dd><dt>Thể loại</dt><dd th:text="${book.category != null ? book.category.name : 'Chưa phân loại'}">Thể loại</dd><dt>Nhà xuất bản</dt><dd th:text="${book.publisher != null ? book.publisher.name : 'Chưa cập nhật'}">Nhà xuất bản</dd><dt>Số lượng còn</dt><dd th:text="${book.availableQuantity} + ' cuốn'">0 cuốn</dd></dl><div class="availability-note" th:text="${book.availableQuantity != null && book.availableQuantity > 0 ? '● Sách hiện có thể tham khảo tại thư viện' : '● Hiện chưa có bản sách sẵn có'}">Trạng thái</div><a class="btn" th:href="@{/user/login}">Đăng nhập để mượn sách <span>→</span></a><p class="small-note">Chức năng tạo phiếu mượn sẽ được kết nối với quy trình mượn sách hiện có sau khi xác nhận API và quyền người dùng.</p></div></section></main><footer class="footer">mộc. <span>Đọc chậm lại, sống sâu hơn.</span></footer>
+<script th:src="@{/js/user.js}"></script></body></html>

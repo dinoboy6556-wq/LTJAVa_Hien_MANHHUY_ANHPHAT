@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title th:text="${pageTitle} ?: 'mộc. — Thư viện của bạn'">mộc. — Thư viện của bạn</title>
+<link rel="stylesheet" th:href="@{/css/user.css}">
+</head><body>
+<header class="topbar"><a class="brand" th:href="@{/user}"><span class="brand-icon">▣</span><span><b>mộc.</b><small>THƯ VIỆN CỦA BẠN</small></span></a>
+<nav><a th:href="@{/user}" class="nav-link">Trang chủ</a><a th:href="@{/user/books}" class="nav-link">Khám phá sách</a><a th:href="@{/user/borrowed}" class="nav-link">Sách đang mượn</a><a th:href="@{/user/history}" class="nav-link">Lịch sử</a></nav>
+<div class="user-actions"><a class="login-link" th:href="@{/user/login}">Đăng nhập</a></div></header>
+<main class="container">
+<section class="hero"><div class="eyebrow">MỘT GÓC NHỎ DÀNH CHO TRI THỨC</div><h1>Mở một cuốn sách,<br><em>mở một thế giới.</em></h1><p>Tìm cuốn sách tiếp theo khiến bạn muốn ngồi lại lâu hơn.</p><a class="btn" th:href="@{/user/books}">Khám phá bộ sưu tập <span>→</span></a><div class="hero-stamp">ĐỌC · KHÁM PHÁ · TRƯỞNG THÀNH</div></section>
+<section class="section-head"><div><div class="eyebrow">DÀNH RIÊNG CHO BẠN</div><h2>Khám phá những trang sách</h2><p>Tìm cảm hứng tiếp theo trong bộ sưu tập của chúng tôi.</p></div><a class="text-link" th:href="@{/user/books}">Xem tất cả →</a></section>
+<div class="book-grid" th:if="${!books.isEmpty()}"><article class="book-card" th:each="book,stat : ${books}"><a class="cover-link" th:href="@{/user/books/{id}(id=${book.id})}"><div class="book-cover" th:classappend="${stat.index % 3 == 1 ? ' cover-sand' : (stat.index % 3 == 2 ? ' cover-rose' : '')}"><small>MỘC · TUYỂN CHỌN</small><div class="cover-symbol">♧</div><h3 th:text="${book.title}">Tên sách</h3><p th:text="${book.author != null ? book.author.name : 'Tác giả chưa cập nhật'}">Tác giả</p><span class="cover-initial" th:text="${#strings.substring(book.title,0,1)}">B</span></div></a><div class="book-info"><div class="category" th:text="${book.category != null ? book.category.name : 'SÁCH'}">THỂ LOẠI</div><h3><a th:href="@{/user/books/{id}(id=${book.id})}" th:text="${book.title}">Tên sách</a></h3><p th:text="${book.author != null ? book.author.name : 'Đang cập nhật tác giả'}">Tác giả</p><div class="book-bottom"><span th:text="${book.availableQuantity != null && book.availableQuantity > 0 ? '● Còn ' + book.availableQuantity + ' cuốn' : '● Tạm hết sách'}" th:classappend="${book.availableQuantity != null && book.availableQuantity > 0 ? ' available' : ' unavailable'}">Còn sách</span><a class="round-arrow" th:href="@{/user/books/{id}(id=${book.id})}">→</a></div></div></article></div>
+<div class="empty-state" th:if="${books.isEmpty()}"><div>✧</div><h3>Thư viện đang chờ những cuốn sách đầu tiên</h3><p>Khi có dữ liệu sách trong cơ sở dữ liệu, chúng sẽ xuất hiện ở đây.</p></div>
+<section class="note-band"><span class="note-icon">✦</span><div><h3>Mỗi ngày một vài trang</h3><p>Không cần đọc thật nhanh. Chỉ cần tìm thấy điều gì đó đáng nhớ.</p></div><a th:href="@{/user/books}">Tìm sách cho mình ↗</a></section></main><footer class="footer">mộc. <span>Đọc chậm lại, sống sâu hơn.</span></footer>
+<script th:src="@{/js/user.js}"></script></body></html>
