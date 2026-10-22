@@ -10,7 +10,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class AuthService {
@@ -30,35 +31,48 @@ public class AuthService {
     @Autowired
     private JwtTokenProvider tokenProvider;
 
-    public JwtResponse login(LoginRequest request) {
+    public JwtResponse login(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(
+                        loginRequest.getEmail(),
+                        loginRequest.getPassword()
+                )
         );
 
-        User user = userRepository.findByEmail(request.getEmail()).orElseThrow();
-        String token = tokenProvider.generateToken(user.getEmail());
+        String jwt = tokenProvider.generateToken(authentication);
+        User user = userRepository.findByEmail(loginRequest.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return new JwtResponse(token, user.getEmail(), user.getFullName());
+        List<String> roles = user.getRoles().stream()
+                .map(role -> role.getName().name())
+                .collect(Collectors.toList());
+
+        return JwtResponse.builder()
+                .token(jwt)
+                .id(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .roles(roles)
+                .build();
     }
 
-    public String register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+    public User register(RegisterRequest registerRequest) {
+        if (userRepository.existsByEmail(registerRequest.getEmail())) {
             throw new RuntimeException("Email đã được sử dụng!");
         }
 
-        Role userRole = roleRepository.findByName(RoleName.ROLE_CUSTOMER)
-                .orElseGet(() -> roleRepository.save(Role.builder().name(RoleName.ROLE_CUSTOMER).build()));
+        Role userRole = roleRepository.findByName(RoleName.ROLE_USER)
+                .orElseGet(() -> roleRepository.save(Role.builder().name(RoleName.ROLE_USER).build()));
 
         User user = User.builder()
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .fullName(request.getFullName())
-                .phone(request.getPhone())
-                .address(request.getAddress())
+                .email(registerRequest.getEmail())
+                .password(passwordEncoder.encode(registerRequest.getPassword()))
+                .fullName(registerRequest.getFullName())
+                .phone(registerRequest.getPhone())
+                .address(registerRequest.getAddress())
                 .roles(Collections.singleton(userRole))
                 .build();
 
-        userRepository.save(user);
-        return "Đăng ký tài khoản thành công!";
+        return userRepository.save(user);
     }
 }

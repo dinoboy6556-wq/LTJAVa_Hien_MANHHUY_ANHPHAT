@@ -26,6 +26,10 @@ public class SaleService {
     @Autowired
     private UserRepository userRepository;
 
+    public List<Sale> getAllSales() {
+        return saleRepository.findAll();
+    }
+
     @Transactional
     public Sale createSale(SaleCreateRequest request) {
         String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -42,13 +46,11 @@ public class SaleService {
             Book book = bookRepository.findById(itemReq.getBookId())
                     .orElseThrow(() -> new ResourceNotFoundException("Sách không tồn tại: " + itemReq.getBookId()));
 
-            // Kiểm tra số lượng kho
             if (book.getAvailableQuantity() < itemReq.getQuantity()) {
                 throw new RuntimeException("Sách '" + book.getTitle() + "' không đủ tồn kho để bán! Cần: " 
                         + itemReq.getQuantity() + ", Còn: " + book.getAvailableQuantity());
             }
 
-            // Trừ số lượng khả dụng
             book.setAvailableQuantity(book.getAvailableQuantity() - itemReq.getQuantity());
             if (book.getAvailableQuantity() == 0) {
                 book.setStatus(BookStatus.OUT_OF_STOCK);
