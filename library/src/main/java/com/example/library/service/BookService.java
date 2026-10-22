@@ -50,7 +50,7 @@ public class BookService {
                 .author(author)
                 .publisher(publisher)
                 .totalQuantity(req.getTotalQuantity())
-                .availableQuantity(req.getTotalQuantity()) // Mặc định kho = tổng ban đầu
+                .availableQuantity(req.getTotalQuantity())
                 .rentalPrice(req.getRentalPrice())
                 .salePrice(req.getSalePrice())
                 .status(req.getTotalQuantity() > 0 ? BookStatus.AVAILABLE : BookStatus.OUT_OF_STOCK)

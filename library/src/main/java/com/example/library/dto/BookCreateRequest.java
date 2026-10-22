@@ -8,16 +8,14 @@ import java.math.BigDecimal;
 
 @Data
 public class BookCreateRequest {
-    @NotBlank(message = "Tên sách không được để trống")
+    @NotBlank
     private String title;
-
     private String isbn;
     private Long categoryId;
     private Long authorId;
     private Long publisherId;
 
-    @NotNull
-    @Min(value = 1, message = "Số lượng phải lớn hơn 0")
+    @NotNull @Min(1)
     private Integer totalQuantity;
 
     @NotNull

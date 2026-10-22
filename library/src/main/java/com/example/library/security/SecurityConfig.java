@@ -39,10 +39,11 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/auth/**", "/", "/index.html", "/*.js", "/*.css").permitAll()
+                .requestMatchers("/api/v1/auth/**", "/", "/index.html", "/*.js", "/*.css", "/h2-console/**").permitAll()
                 .anyRequest().authenticated()
             );
 
+        http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

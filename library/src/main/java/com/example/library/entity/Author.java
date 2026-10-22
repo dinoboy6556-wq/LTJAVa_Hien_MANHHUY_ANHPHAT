@@ -14,5 +14,5 @@ public class Author {
     @Column(nullable = false)
     private String name;
 
-    private String bio;
+    private String biography;
 }

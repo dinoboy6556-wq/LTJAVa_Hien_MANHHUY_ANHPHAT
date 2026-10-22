@@ -26,6 +26,7 @@ public class Sale {
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL)
+    @Builder.Default
     private List<SaleItem> items = new ArrayList<>();
 
     @PrePersist

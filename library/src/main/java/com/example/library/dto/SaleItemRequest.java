@@ -9,7 +9,6 @@ public class SaleItemRequest {
     @NotNull
     private Long bookId;
 
-    @NotNull
-    @Min(value = 1)
+    @NotNull @Min(1)
     private Integer quantity;
 }
