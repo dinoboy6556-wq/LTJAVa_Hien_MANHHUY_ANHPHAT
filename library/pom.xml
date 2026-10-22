@@ -18,10 +18,10 @@
     <description>Hệ thống Quản lý Thư viện, Tồn kho, Mượn trả và Bán sách - Tuần 4</description>
 
     <properties>
-    <java.version>21</java.version>
-    <jjwt.version>0.11.5</jjwt.version>
-    <lombok.version>1.18.32</lombok.version>
-</properties>
+        <java.version>21</java.version>
+        <jjwt.version>0.11.5</jjwt.version>
+        <lombok.version>1.18.32</lombok.version>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -72,13 +72,13 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Lombok -->
+        <!-- Lombok (Cố định phiên bản 1.18.32 tương thích Java 21) -->
         <dependency>
-    <groupId>org.projectlombok</groupId>
-    <artifactId>lombok</artifactId>
-    <version>${lombok.version}</version>
-    <scope>provided</scope>
-</dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- Testing -->
         <dependency>
@@ -95,7 +95,6 @@
 
     <build>
         <plugins>
-            <!-- Thêm cấu hình Annotation Processor cho Lombok trên Java 21 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -107,7 +106,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
+                            <version>1.18.32</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
