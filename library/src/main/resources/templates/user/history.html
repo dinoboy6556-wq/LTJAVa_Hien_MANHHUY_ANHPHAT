@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title th:text="${pageTitle} ?: 'mộc. — Thư viện của bạn'">mộc. — Thư viện của bạn</title>
+<link rel="stylesheet" th:href="@{/css/user.css}">
+</head><body>
+<header class="topbar"><a class="brand" th:href="@{/user}"><span class="brand-icon">▣</span><span><b>mộc.</b><small>THƯ VIỆN CỦA BẠN</small></span></a>
+<nav><a th:href="@{/user}" class="nav-link">Trang chủ</a><a th:href="@{/user/books}" class="nav-link">Khám phá sách</a><a th:href="@{/user/borrowed}" class="nav-link">Sách đang mượn</a><a th:href="@{/user/history}" class="nav-link">Lịch sử</a></nav>
+<div class="user-actions"><a class="login-link" th:href="@{/user/login}">Đăng nhập</a></div></header>
+<main class="container">
+<section class="page-intro"><div class="eyebrow">GÓC CỦA BẠN</div><h1>Lịch sử mượn sách</h1><p>Lịch sử mượn và trả sách sẽ hiển thị theo tài khoản của bạn.</p></section><div class="empty-state"><div>✧</div><h3>Thông tin cá nhân cần đăng nhập</h3><p>Để bảo vệ dữ liệu mượn trả, vui lòng đăng nhập tài khoản của bạn.</p><a class="btn" th:href="@{/user/login}">Đến trang đăng nhập →</a></div></main><footer class="footer">mộc. <span>Đọc chậm lại, sống sâu hơn.</span></footer>
+<script th:src="@{/js/user.js}"></script></body></html>

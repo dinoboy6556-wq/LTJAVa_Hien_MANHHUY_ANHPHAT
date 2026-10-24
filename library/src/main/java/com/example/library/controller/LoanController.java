@@ -1,6 +1,7 @@
 package com.example.library.controller;
 
 import com.example.library.dto.LoanCreateRequest;
+import com.example.library.dto.LoanReturnRequest;
 import com.example.library.entity.Loan;
 import com.example.library.service.LoanService;
 import jakarta.validation.Valid;
@@ -13,7 +14,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/loans")
 public class LoanController {
-
     @Autowired
     private LoanService loanService;
 
@@ -33,7 +33,8 @@ public class LoanController {
     }
 
     @PostMapping("/{id}/return")
-    public ResponseEntity<Loan> returnLoan(@PathVariable Long id) {
-        return ResponseEntity.ok(loanService.returnLoan(id));
+    public ResponseEntity<Loan> returnLoan(@PathVariable Long id,
+                                           @RequestBody(required = false) LoanReturnRequest request) {
+        return ResponseEntity.ok(loanService.returnLoan(id, request));
     }
 }

@@ -1,5 +1,6 @@
 package com.example.library.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 import java.util.List;
@@ -7,5 +8,5 @@ import java.util.List;
 @Data
 public class SaleCreateRequest {
     @NotEmpty
-    private List<SaleItemRequest> items;
+    private List<@Valid SaleItemRequest> items;
 }

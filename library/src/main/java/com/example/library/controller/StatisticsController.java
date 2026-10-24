@@ -27,6 +27,11 @@ public class StatisticsController {
         return ResponseEntity.ok(statisticsService.getOutOfStockBooks());
     }
 
+    @GetMapping("/customers-borrowing")
+    public ResponseEntity<List<Loan>> getCustomersBorrowing() {
+        return ResponseEntity.ok(statisticsService.getActiveLoans());
+    }
+
     @GetMapping("/active-loans")
     public ResponseEntity<List<Loan>> getActiveLoans() {
         return ResponseEntity.ok(statisticsService.getActiveLoans());
