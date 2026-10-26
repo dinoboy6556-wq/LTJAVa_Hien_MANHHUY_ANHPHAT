@@ -25,6 +25,8 @@ class LoanReturnTest {
     @Mock private BookRepository bookRepository;
     @Mock private UserRepository userRepository;
     @Mock private FineRepository fineRepository;
+    @Mock private BookCopyService copyService;
+
     @InjectMocks private LoanService loanService;
 
     private Loan loan;
@@ -42,21 +44,20 @@ class LoanReturnTest {
 
     @Test
     void normalReturnAddsBookBackToStock() {
-        when(loanRepository.findById(1L)).thenReturn(Optional.of(loan));
+        when(loanRepository.findForUpdate(1L)).thenReturn(Optional.of(loan));
         when(loanRepository.save(any(Loan.class))).thenAnswer(inv -> inv.getArgument(0));
         LoanReturnRequest request = new LoanReturnRequest();
         request.setCondition(BookReturnCondition.NORMAL);
 
         loanService.returnLoan(1L, request);
 
-        assertEquals(3, book.getAvailableQuantity());
-        verify(bookRepository).save(book);
+        verify(copyService).returnCopy(loan.getItems().get(0), BookReturnCondition.NORMAL);
         verify(fineRepository, never()).save(any(Fine.class));
     }
 
     @Test
     void lostBookCreatesFineAndDoesNotAddToStock() {
-        when(loanRepository.findById(1L)).thenReturn(Optional.of(loan));
+        when(loanRepository.findForUpdate(1L)).thenReturn(Optional.of(loan));
         when(loanRepository.save(any(Loan.class))).thenAnswer(inv -> inv.getArgument(0));
         when(fineRepository.save(any(Fine.class))).thenAnswer(inv -> inv.getArgument(0));
         LoanReturnRequest request = new LoanReturnRequest();
@@ -64,7 +65,7 @@ class LoanReturnTest {
 
         Loan returned = loanService.returnLoan(1L, request);
 
-        assertEquals(2, book.getAvailableQuantity());
+        verify(copyService).returnCopy(loan.getItems().get(0), BookReturnCondition.LOST);
         assertEquals(new BigDecimal("100000"), returned.getFineAmount());
         verify(fineRepository).save(any(Fine.class));
         verify(bookRepository, never()).save(any(Book.class));
@@ -73,13 +74,13 @@ class LoanReturnTest {
     @Test
     void returningAlreadyReturnedLoanIsRejected() {
         loan.setStatus(LoanStatus.RETURNED);
-        when(loanRepository.findById(1L)).thenReturn(Optional.of(loan));
+        when(loanRepository.findForUpdate(1L)).thenReturn(Optional.of(loan));
         assertThrows(IllegalStateException.class, () -> loanService.returnLoan(1L, new LoanReturnRequest()));
     }
 
     @Test
     void missingLoanIsReported() {
-        when(loanRepository.findById(99L)).thenReturn(Optional.empty());
+        when(loanRepository.findForUpdate(99L)).thenReturn(Optional.empty());
         assertThrows(ResourceNotFoundException.class, () -> loanService.returnLoan(99L, new LoanReturnRequest()));
     }
 }

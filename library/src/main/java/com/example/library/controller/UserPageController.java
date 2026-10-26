@@ -14,8 +14,10 @@ import java.util.stream.Collectors;
 @Controller
 public class UserPageController {
     private final BookService bookService;
+    private final com.example.library.service.BookCopyService copies;
 
-    public UserPageController(BookService bookService) {
+    public UserPageController(BookService bookService, com.example.library.service.BookCopyService copies) {
+        this.copies = copies;
         this.bookService = bookService;
     }
 
@@ -46,7 +48,13 @@ public class UserPageController {
     @GetMapping("/user/books/{id}")
     public String bookDetail(@PathVariable Long id, Model model) {
         model.addAttribute("book", bookService.getBookById(id));
+        model.addAttribute("copies", copies.list(id));
         return "user/book-detail";
+    }
+
+    @GetMapping("/user/profile")
+    public String profile() {
+        return "user/profile";
     }
 
     @GetMapping("/user/login")

@@ -21,6 +21,9 @@ public class SaleService {
     private SaleRepository saleRepository;
 
     @Autowired
+    private BookCopyService copyService;
+
+    @Autowired
     private BookRepository bookRepository;
 
     @Autowired
@@ -42,33 +45,19 @@ public class SaleService {
         List<SaleItem> items = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        for (SaleItemRequest itemReq : request.getItems()) {
-            Book book = bookRepository.findById(itemReq.getBookId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Sách không tồn tại: " + itemReq.getBookId()));
-
-            if (book.getAvailableQuantity() < itemReq.getQuantity()) {
-                throw new RuntimeException("Sách '" + book.getTitle() + "' không đủ tồn kho để bán! Cần: " 
-                        + itemReq.getQuantity() + ", Còn: " + book.getAvailableQuantity());
-            }
-
-            book.setAvailableQuantity(book.getAvailableQuantity() - itemReq.getQuantity());
-            if (book.getAvailableQuantity() == 0) {
-                book.setStatus(BookStatus.OUT_OF_STOCK);
-            }
-            bookRepository.save(book);
+        for (SaleItemRequest itemReq : request.getItems().stream().sorted(java.util.Comparator.comparing(SaleItemRequest::getBookId)).toList()) {
+            Book book = copyService.lockBook(itemReq.getBookId());
+            List<BookCopy> selected = copyService.take(book.getId(), itemReq.getQuantity(), BookCopyStatus.SOLD);
 
             BigDecimal subtotal = book.getSalePrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalAmount = totalAmount.add(subtotal);
 
-            SaleItem item = SaleItem.builder()
-                    .sale(sale)
-                    .book(book)
-                    .quantity(itemReq.getQuantity())
-                    .unitPrice(book.getSalePrice())
-                    .subtotal(subtotal)
-                    .build();
-
-            items.add(item);
+            for (BookCopy copy : selected) {
+                SaleItem item = SaleItem.builder().sale(sale).book(book).copy(copy).quantity(1)
+                        .unitPrice(book.getSalePrice())
+                        .subtotal(book.getSalePrice()).build();
+                items.add(item);
+            }
         }
 
         sale.setTotalAmount(totalAmount);

@@ -26,6 +26,8 @@ public class BookServiceTest {
     @Mock
     private CategoryRepository categoryRepository;
 
+    @Mock private BookCopyService copyService;
+
     @InjectMocks
     private BookService bookService;
 
