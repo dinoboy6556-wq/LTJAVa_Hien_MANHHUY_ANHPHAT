@@ -1,0 +1,3 @@
+# JVM crash and replay logs (any directory)
+**/hs_err_pid*.log
+**/replay_pid*.log
