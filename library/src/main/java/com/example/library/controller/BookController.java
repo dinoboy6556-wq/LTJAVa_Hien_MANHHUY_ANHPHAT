@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/v1/books")
@@ -27,7 +28,19 @@ public class BookController {
         return ResponseEntity.ok(bookService.getBookById(id));
     }
 
+    @GetMapping("/{id}/related")
+    public ResponseEntity<List<Book>> getRelatedBooks(@PathVariable Long id) {
+        Book source = bookService.getBookById(id);
+        List<Book> related = bookService.getAllBooks().stream()
+                .filter(book -> !book.getId().equals(id))
+                .filter(book -> source.getCategory() != null && book.getCategory() != null
+                        && source.getCategory().getId().equals(book.getCategory().getId()))
+                .limit(6).toList();
+        return ResponseEntity.ok(related);
+    }
+
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     public ResponseEntity<Book> createBook(@Valid @RequestBody BookCreateRequest req) {
         return ResponseEntity.ok(bookService.createBook(req));
     }

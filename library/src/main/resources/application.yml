@@ -5,9 +5,9 @@ spring:
   application:
     name: library
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/library_db
-    username: root
-    password:
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/library_db}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -17,5 +17,5 @@ spring:
 
 app:
   jwt:
-    secret: 9a6e234578123456789012345678901234567890123456789012345678901234
+    secret: ${APP_JWT_SECRET:local-development-only-secret-change-before-deployment-1234567890}
     expiration-ms: 86400000

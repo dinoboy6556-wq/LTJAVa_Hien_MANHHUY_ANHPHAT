@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface FineRepository extends JpaRepository<Fine, Long> {
     List<Fine> findByLoan(Loan loan);
+    List<Fine> findByLoan_User_EmailOrderByCreatedAtDesc(String email);
 }

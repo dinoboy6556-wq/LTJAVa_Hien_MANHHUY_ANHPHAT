@@ -37,7 +37,7 @@ Có index `(book_id, status)`. Không xóa bản sách đã phát sinh giao dị
 4. Mở terminal tại thư mục `library`, chạy một lần:
 
 ```powershell
-.\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--app.book-copies.migrate=true"
+.\mvnw.cmd "-Dspring-boot.run.arguments=--app.book-copies.migrate=true" spring-boot:run
 ```
 
 Hibernate tạo bảng `book_copies` và hai cột FK kể trên. Runner chuyển đổi sau khi bộ dữ liệu mẫu khởi tạo xong. Cờ migrate mặc định **tắt**: chạy thường chỉ cập nhật schema, không tự suy diễn các quyển cho dữ liệu cũ.
@@ -49,6 +49,8 @@ Hibernate tạo bảng `book_copies` và hai cột FK kể trên. Runner chuyể
 ```
 
 Với database mới, cũng chạy cờ migrate một lần để tạo mã cho sách mẫu. Đầu sách thêm qua API sau đó tự sinh mã ngay; không cần bật cờ cho mỗi lần nhập sách.
+
+Lệnh trên chạy được từ thư mục gốc qua wrapper ở root hoặc từ `library` qua wrapper trong module. Nếu không muốn dùng Maven Wrapper, dùng Maven đã cài sẵn: `mvn "-Dspring-boot.run.arguments=--app.book-copies.migrate=true" spring-boot:run`. Nếu Maven báo không mở được khóa trong `.m2/repository`, đóng các tiến trình Maven khác hoặc chuyển kho dependency sang chỗ có quyền ghi: `.\mvnw.cmd "-Dmaven.repo.local=$env:LOCALAPPDATA\maven-cache\repository" "-Dspring-boot.run.arguments=--app.book-copies.migrate=true" spring-boot:run`. Nếu wrapper không tải/cài được chính Maven distribution trong `.m2`, đặt `MAVEN_USER_HOME` sang thư mục ghi được. Nếu app bắt đầu nhưng báo lỗi kết nối, bật MySQL Laragon và kiểm tra `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`.
 
 ### Quy tắc chuyển đổi
 

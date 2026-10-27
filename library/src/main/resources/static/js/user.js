@@ -91,6 +91,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const accountPage = ['/user/borrowed', '/user/history'].includes(window.location.pathname);
   const loanPanel = accountPage ? document.querySelector('main .empty-state') : null;
   const token = localStorage.getItem('libraryToken');
+  const mainNav = document.querySelector('.topbar nav');
+  if (mainNav && !mainNav.querySelector('a[href="/user/favorites"]')) {
+    const favoritesLink = document.createElement('a'); favoritesLink.href = '/user/favorites'; favoritesLink.className = 'nav-link'; favoritesLink.textContent = 'Yêu thích'; mainNav.append(favoritesLink);
+  }
 
   function clearSession() {
     localStorage.removeItem('libraryToken');
@@ -117,6 +121,10 @@ document.addEventListener('DOMContentLoaded', () => {
       window.location.href = '/user/login';
     });
     actions.replaceChildren(account, logout);
+    if (Array.isArray(profile.roles) && profile.roles.includes('ROLE_ADMIN')) {
+      const nav = document.querySelector('.topbar nav');
+      if (nav && !nav.querySelector('a[href="/admin"]')) { const admin = document.createElement('a'); admin.href = '/admin'; admin.className = 'nav-link'; admin.textContent = 'Quản trị'; nav.append(admin); }
+    }
     const loginLink = document.getElementById('bookLoginLink');
     const borrowPanel = document.getElementById('bookBorrowPanel');
     if (loginLink) loginLink.hidden = true;
@@ -150,6 +158,23 @@ document.addEventListener('DOMContentLoaded', () => {
         books.append(row);
       }
       card.append(title, dates, books);
+      const dueDate = loan.dueDate ? new Date(`${loan.dueDate}T00:00:00`) : null;
+      const canRenew = loan.status === 'BORROWED' && Number(loan.renewalCount || 0) < 1 && dueDate && dueDate >= new Date(new Date().toDateString());
+      if (canRenew) {
+        const renew = document.createElement('button'); renew.type = 'button'; renew.className = 'btn btn-secondary'; renew.textContent = 'Gia hạn thêm 7 ngày';
+        renew.addEventListener('click', async () => {
+          if (!window.confirm('Gia hạn phiếu mượn này thêm 7 ngày?')) return;
+          renew.disabled = true;
+          try {
+            const response = await fetch(`/api/v1/loans/${loan.id}/renew`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.message || 'Không thể gia hạn phiếu mượn.');
+            dates.textContent = `Ngày mượn: ${result.borrowDate || '—'} · Hạn trả mới: ${result.dueDate || '—'}`;
+            renew.textContent = 'Đã gia hạn';
+          } catch (error) { dates.textContent += ` · ${error.message}`; renew.disabled = false; }
+        });
+        card.append(renew);
+      }
       loanPanel.append(card);
     }
   }
@@ -169,6 +194,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!Array.isArray(loans)) throw new Error('Dữ liệu phiếu mượn không hợp lệ.');
         showAccount();
         showLoans(loans);
+        if (loanPanel) fetch('/api/v1/fines/my-fines', { headers: { Authorization: `Bearer ${token}` } }).then(async response => {
+          if (!response.ok) throw new Error('Chưa tải được danh sách khoản phạt.');
+          const fines = await response.json();
+          if (!fines.length) return;
+          const section = document.createElement('section'); section.className = 'fine-list';
+          const heading = document.createElement('h3'); heading.textContent = 'Khoản phạt'; section.append(heading);
+          for (const fine of fines) {
+            const row = document.createElement('p');
+            row.textContent = `Phiếu #${fine.loan?.id || '—'} · ${fine.reason || 'Khoản phạt'} · ${Number(fine.amount || 0).toLocaleString('vi-VN')} đ · ${fine.paid ? 'Đã thanh toán' : 'Chưa thanh toán'}`;
+            section.append(row);
+          }
+          loanPanel.append(section);
+        }).catch(() => {});
       })
       .catch(error => {
         if (loanPanel) loanPanel.textContent = error.message || 'Không thể kết nối máy chủ.';

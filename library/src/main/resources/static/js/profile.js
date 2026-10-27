@@ -50,4 +50,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) { message.textContent = error.message; }
     finally { fields.disabled = false; }
   });
+
+  const passwordForm = document.getElementById('changePasswordForm');
+  passwordForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const values = new FormData(passwordForm);
+    const feedback = document.getElementById('passwordMessage');
+    const button = passwordForm.querySelector('button[type="submit"]');
+    button.disabled = true; feedback.textContent = 'Đang đổi mật khẩu...';
+    try {
+      const response = await fetch('/api/v1/auth/change-password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ currentPassword: values.get('currentPassword'), newPassword: values.get('newPassword') })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Không thể đổi mật khẩu.');
+      passwordForm.reset(); feedback.classList.add('success'); feedback.textContent = 'Đã đổi mật khẩu.';
+    } catch (error) { feedback.classList.remove('success'); feedback.textContent = error.message; }
+    finally { button.disabled = false; }
+  });
 });

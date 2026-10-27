@@ -137,4 +137,22 @@ public class LoanService {
         }
         return loanRepository.save(loan);
     }
+
+    @Transactional
+    public Loan renewLoan(Long loanId) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Loan loan = loanRepository.findForUpdate(loanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mượn ID: " + loanId));
+        if (loan.getUser() == null || !email.equals(loan.getUser().getEmail()))
+            throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền gia hạn phiếu mượn này");
+        if (loan.getStatus() != LoanStatus.BORROWED || loan.getDueDate().isBefore(LocalDate.now()))
+            throw new IllegalStateException("Chỉ có thể gia hạn phiếu đang mượn và chưa quá hạn");
+        if (loan.getRenewalCount() != null && loan.getRenewalCount() >= 1)
+            throw new IllegalStateException("Mỗi phiếu chỉ được gia hạn một lần");
+        if (fineRepository.findByLoan(loan).stream().anyMatch(fine -> !Boolean.TRUE.equals(fine.getPaid())))
+            throw new IllegalStateException("Hãy thanh toán khoản phạt trước khi gia hạn");
+        loan.setDueDate(loan.getDueDate().plusDays(7));
+        loan.setRenewalCount((loan.getRenewalCount() == null ? 0 : loan.getRenewalCount()) + 1);
+        return loanRepository.save(loan);
+    }
 }

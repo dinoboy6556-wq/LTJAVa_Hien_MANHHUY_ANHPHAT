@@ -11,6 +11,8 @@ public class BookCreateRequest {
     @NotBlank
     private String title;
     private String isbn;
+    private String coverImageUrl;
+    private String description;
     private Long categoryId;
     private Long authorId;
     private Long publisherId;

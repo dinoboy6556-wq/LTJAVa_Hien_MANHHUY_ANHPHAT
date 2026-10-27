@@ -79,4 +79,7 @@ public class UserPageController {
     public String history() {
         return "user/history";
     }
+
+    @GetMapping("/user/favorites")
+    public String favorites() { return "user/favorites"; }
 }

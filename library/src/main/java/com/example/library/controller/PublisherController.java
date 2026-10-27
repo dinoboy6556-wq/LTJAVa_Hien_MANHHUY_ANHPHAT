@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/v1/publishers")
@@ -20,6 +21,7 @@ public class PublisherController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     public ResponseEntity<Publisher> create(@RequestBody Publisher publisher) {
         return ResponseEntity.ok(publisherService.create(publisher));
     }

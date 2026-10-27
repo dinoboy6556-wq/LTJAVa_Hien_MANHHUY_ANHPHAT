@@ -6,6 +6,7 @@ import com.example.library.repository.*;
 import com.example.library.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.*;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,13 +32,22 @@ public class AuthService {
     @Autowired
     private JwtTokenProvider tokenProvider;
 
+    @Autowired
+    private LoginAttemptService loginAttempts;
+
     public JwtResponse login(LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getEmail(),
-                        loginRequest.getPassword()
-                )
-        );
+        String attemptKey = loginRequest.getEmail();
+        if (loginAttempts.isBlocked(attemptKey)) throw new LoginRateLimitException();
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
+                    loginRequest.getEmail(), loginRequest.getPassword()));
+            loginAttempts.succeeded(attemptKey);
+        } catch (AuthenticationException ex) {
+            loginAttempts.failed(attemptKey);
+            if (loginAttempts.isBlocked(attemptKey)) throw new LoginRateLimitException();
+            throw ex;
+        }
 
         String jwt = tokenProvider.generateToken(authentication);
         User user = userRepository.findByEmail(loginRequest.getEmail())
@@ -54,6 +64,14 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .roles(roles)
                 .build();
+    }
+
+    public void changePassword(String email, String currentPassword, String newPassword) {
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản"));
+        if (!passwordEncoder.matches(currentPassword, user.getPassword()))
+            throw new org.springframework.security.authentication.BadCredentialsException("Mật khẩu hiện tại không đúng");
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     public User register(RegisterRequest registerRequest) {
