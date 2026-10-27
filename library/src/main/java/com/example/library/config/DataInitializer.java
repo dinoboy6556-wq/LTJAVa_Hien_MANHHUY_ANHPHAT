@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.util.Set;
 
 @Component
+@org.springframework.core.annotation.Order(0)
 public class DataInitializer implements CommandLineRunner {
 
     @Autowired

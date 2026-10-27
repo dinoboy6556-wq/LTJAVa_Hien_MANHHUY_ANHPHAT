@@ -5,7 +5,6 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -21,8 +20,8 @@
 
     <properties>
         <java.version>21</java.version>
+        <lombok.version>1.18.48</lombok.version>
         <jjwt.version>0.11.5</jjwt.version>
-        <lombok.version>1.18.42</lombok.version>
     </properties>
 
     <dependencies>
@@ -93,7 +92,13 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Kiểm thử -->
+        <!-- In-memory database used only by tests. -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

@@ -9,6 +9,10 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface BookRepository extends JpaRepository<Book, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select b from Book b where b.id = :id")
+    java.util.Optional<Book> findForUpdate(@Param("id") Long id);
+
     List<Book> findByStatus(BookStatus status);
     List<Book> findByAvailableQuantityEquals(Integer quantity);
 

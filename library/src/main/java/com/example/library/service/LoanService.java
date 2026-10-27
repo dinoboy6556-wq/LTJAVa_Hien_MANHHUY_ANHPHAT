@@ -24,6 +24,9 @@ public class LoanService {
     private LoanRepository loanRepository;
 
     @Autowired
+    private BookCopyService copyService;
+
+    @Autowired
     private BookRepository bookRepository;
 
     @Autowired
@@ -59,31 +62,19 @@ public class LoanService {
         List<LoanItem> items = new ArrayList<>();
         BigDecimal totalRentalFee = BigDecimal.ZERO;
 
-        for (LoanItemRequest itemReq : request.getItems()) {
-            Book book = bookRepository.findById(itemReq.getBookId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Sách không tồn tại: " + itemReq.getBookId()));
-
-            if (book.getAvailableQuantity() < itemReq.getQuantity()) {
-                throw new RuntimeException("Sách '" + book.getTitle() + "' không đủ tồn kho để cho mượn!");
-            }
-
-            book.setAvailableQuantity(book.getAvailableQuantity() - itemReq.getQuantity());
-            if (book.getAvailableQuantity() == 0) {
-                book.setStatus(BookStatus.OUT_OF_STOCK);
-            }
-            bookRepository.save(book);
+        for (LoanItemRequest itemReq : request.getItems().stream().sorted(java.util.Comparator.comparing(LoanItemRequest::getBookId)).toList()) {
+            Book book = copyService.lockBook(itemReq.getBookId());
+            List<BookCopy> selected = copyService.take(book.getId(), itemReq.getQuantity(), BookCopyStatus.BORROWED);
 
             BigDecimal rentalFee = book.getRentalPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalRentalFee = totalRentalFee.add(rentalFee);
 
-            LoanItem item = LoanItem.builder()
-                    .loan(loan)
-                    .book(book)
-                    .quantity(itemReq.getQuantity())
-                    .rentalPrice(book.getRentalPrice())
-                    .build();
-
-            items.add(item);
+            for (BookCopy copy : selected) {
+                LoanItem item = LoanItem.builder().loan(loan).book(book).copy(copy).quantity(1)
+                        .rentalPrice(book.getRentalPrice())
+                        .build();
+                items.add(item);
+            }
         }
 
         loan.setRentalFee(totalRentalFee);
@@ -101,7 +92,7 @@ public class LoanService {
 
     @Transactional
     public Loan returnLoan(Long loanId, LoanReturnRequest request) {
-        Loan loan = loanRepository.findById(loanId)
+        Loan loan = loanRepository.findForUpdate(loanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mượn ID: " + loanId));
 
         if (loan.getStatus() == LoanStatus.RETURNED) {
@@ -141,14 +132,8 @@ public class LoanService {
             fineRepository.save(Fine.builder().loan(loan).amount(totalFine).reason(reason).paid(false).build());
         }
 
-        // Chỉ sách nguyên vẹn mới được cộng lại số lượng sẵn có trong kho.
-        if (condition == BookReturnCondition.NORMAL) {
-            for (LoanItem item : loan.getItems()) {
-                Book book = item.getBook();
-                book.setAvailableQuantity(book.getAvailableQuantity() + item.getQuantity());
-                if (book.getAvailableQuantity() > 0) book.setStatus(BookStatus.AVAILABLE);
-                bookRepository.save(book);
-            }
+        for (LoanItem item : loan.getItems().stream().sorted(java.util.Comparator.comparing(i -> i.getBook().getId())).toList()) {
+            copyService.returnCopy(item, condition);
         }
         return loanRepository.save(loan);
     }

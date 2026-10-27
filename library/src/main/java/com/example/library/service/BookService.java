@@ -14,6 +14,9 @@ import java.util.List;
 public class BookService {
 
     @Autowired
+    private BookCopyService copyService;
+
+    @Autowired
     private BookRepository bookRepository;
 
     @Autowired
@@ -56,6 +59,8 @@ public class BookService {
                 .status(req.getTotalQuantity() > 0 ? BookStatus.AVAILABLE : BookStatus.OUT_OF_STOCK)
                 .build();
 
-        return bookRepository.save(book);
+        Book saved = bookRepository.save(book);
+        copyService.initialize(saved.getId());
+        return saved;
     }
 }
