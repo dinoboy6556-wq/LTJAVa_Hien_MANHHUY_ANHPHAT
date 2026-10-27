@@ -11,6 +11,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public interface LoanRepository extends JpaRepository<Loan, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select l from Loan l where l.id = :id")
+    java.util.Optional<Loan> findForUpdate(@Param("id") Long id);
+
     List<Loan> findByUser(User user);
     List<Loan> findByStatus(LoanStatus status);
     long countByStatus(LoanStatus status);
