@@ -36,6 +36,7 @@ class BookCopyIntegrationTest {
     @Autowired SaleService saleService;
     @Autowired BookService bookService;
     @Autowired MockMvc mvc;
+    @Autowired CatalogService catalog;
     @Autowired jakarta.persistence.EntityManager entityManager;
 
     Book book(int total, int available) {
@@ -171,5 +172,26 @@ class BookCopyIntegrationTest {
             assertEquals(1,copies.countByBookIdAndStatus(book.getId(),BookCopyStatus.BORROWED));
             assertEquals(0,books.findById(book.getId()).orElseThrow().getAvailableQuantity());
         } finally { pool.shutdownNow(); }
+    }
+
+    @Test
+    void catalogFiltersPricesAvailabilityAndPaginates() throws Exception {
+        for(int n=0;n<14;n++) {
+            Book book=book(1,n==13?0:1);book.setTitle("CatalogUnique " + n);
+            book.setRentalPrice(BigDecimal.valueOf(n*1000));books.save(book);
+        }
+        var first=catalog.search("CatalogUnique","","",null,null,"","price_asc",0);
+        assertEquals(14,first.getTotalElements());assertEquals(12,first.getContent().size());
+        var last=catalog.search("CatalogUnique","","",null,null,"","price_asc",99);
+        assertEquals(1,last.getNumber());assertEquals(2,last.getContent().size());
+        var filtered=catalog.search("CatalogUnique","","",BigDecimal.valueOf(10000),BigDecimal.valueOf(13000),"available","price_desc",0);
+        assertEquals(3,filtered.getTotalElements());assertEquals(0,BigDecimal.valueOf(12000).compareTo(filtered.getContent().get(0).getRentalPrice()));
+        assertThrows(IllegalArgumentException.class,()->catalog.search("","","",BigDecimal.TEN,BigDecimal.ONE,"","",0));
+        mvc.perform(get("/user/books").param("q","CatalogUnique").param("sort","price_asc"))
+            .andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("Trang sau")));
+        mvc.perform(get("/user/books").param("q","no-matching-title-unique"))
+            .andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("Chưa tìm thấy")));
+        mvc.perform(get("/user/books").param("min","100").param("max","1"))
+            .andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("Khoảng phí mượn")));
     }
 }

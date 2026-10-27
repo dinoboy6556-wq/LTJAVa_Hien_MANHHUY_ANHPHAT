@@ -33,3 +33,7 @@ Nếu Maven Wrapper không tải được Maven, cần kết nối Internet ho�
 ## Cập nhật database: mã riêng cho từng quyển sách
 
 Trước khi chạy phiên bản quản lý từng quyển, đọc [hướng dẫn chuyển đổi book_copies](library/docs/BOOK_COPIES.md). Có bảng mới, hai cột khóa ngoại mới và bước chuyển dữ liệu tồn kho/phiếu đang mượn. Database Laragon của nhánh này là `library_db`.
+
+## Giao diện chính
+
+Dùng Thymeleaf tại `/user`; React trong `frontend/` chỉ là bản thử nghiệm tham khảo. Xem [tiến độ UX và lộ trình](library/docs/UX_ROADMAP.md) để biết phần đã triển khai và checklist kiểm tra.
