@@ -14,9 +14,11 @@ import java.util.stream.Collectors;
 @Controller
 public class UserPageController {
     private final BookService bookService;
+    private final com.example.library.service.CatalogService catalog;
     private final com.example.library.service.BookCopyService copies;
 
-    public UserPageController(BookService bookService, com.example.library.service.BookCopyService copies) {
+    public UserPageController(BookService bookService, com.example.library.service.BookCopyService copies, com.example.library.service.CatalogService catalog) {
+        this.catalog = catalog;
         this.copies = copies;
         this.bookService = bookService;
     }
@@ -30,18 +32,19 @@ public class UserPageController {
     }
 
     @GetMapping("/user/books")
-    public String books(@RequestParam(required = false) String q, Model model) {
-        List<Book> books = bookService.getAllBooks();
-        if (q != null && !q.isBlank()) {
-            String keyword = q.trim().toLowerCase();
-            books = books.stream().filter(b ->
-                    (b.getTitle() != null && b.getTitle().toLowerCase().contains(keyword)) ||
-                    (b.getAuthor() != null && b.getAuthor().getName() != null && b.getAuthor().getName().toLowerCase().contains(keyword)) ||
-                    (b.getCategory() != null && b.getCategory().getName() != null && b.getCategory().getName().toLowerCase().contains(keyword))
-            ).collect(Collectors.toList());
+    public String books(@RequestParam(defaultValue="") String q,
+            @RequestParam(defaultValue="") String author, @RequestParam(defaultValue="") String category,
+            @RequestParam(required=false) java.math.BigDecimal min, @RequestParam(required=false) java.math.BigDecimal max,
+            @RequestParam(defaultValue="") String status, @RequestParam(defaultValue="title") String sort,
+            @RequestParam(defaultValue="0") int page, Model model) {
+        org.springframework.data.domain.Page<Book> results;
+        try { results = catalog.search(q,author,category,min,max,status,sort,page); }
+        catch (IllegalArgumentException ex) {
+            results = org.springframework.data.domain.Page.empty(); model.addAttribute("filterError",ex.getMessage());
         }
-        model.addAttribute("books", books);
-        model.addAttribute("q", q == null ? "" : q);
+        model.addAttribute("books",results.getContent()); model.addAttribute("result",results);
+        model.addAttribute("q",q); model.addAttribute("author",author); model.addAttribute("category",category);
+        model.addAttribute("min",min); model.addAttribute("max",max); model.addAttribute("status",status); model.addAttribute("sort",sort);
         return "user/books";
     }
 

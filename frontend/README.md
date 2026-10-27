@@ -1,3 +1,5 @@
+> Bản thử nghiệm tham khảo. Giao diện độc giả chính hiện là Thymeleaf tại http://localhost:8080/user. Không cần chạy React để dùng các chức năng mới.
+
 # Giao diện người dùng thư viện Mộc (React + Vite)
 
 Frontend này được bổ sung riêng cho độc giả. Giao diện quản trị HTML hiện có trong Spring Boot không bị xóa hoặc thay thế.

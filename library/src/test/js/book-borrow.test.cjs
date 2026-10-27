@@ -8,7 +8,7 @@ function setup(status = 200, quantity = '1') {
   const button = { disabled: false }, message = { classList: { add() {}, remove() {} } };
   const form = { dataset: { bookId: '5' }, querySelector: () => button, addEventListener: (_, handler) => form.submit = handler };
   const storage = new Map([['libraryToken', 'token'], ['libraryProfile', '{}']]);
-  const calls = [], window = { location: {} };
+  const calls = [], window = { location: {}, confirm: () => true };
   vm.runInNewContext(source, {
     document: { addEventListener: (_, fn) => fn(), getElementById: id => id === 'bookBorrowForm' ? form : message },
     localStorage: { getItem: key => storage.get(key), removeItem: key => storage.delete(key) },
@@ -40,6 +40,11 @@ test('expired session requires login', async () => {
 });
 test('invalid quantities are not submitted', async () => {
   const app = setup(200, '0');
+  await app.form.submit({preventDefault(){}});
+  assert.equal(app.calls.length, 0);
+});
+test('cancel confirmation does not create a loan', async () => {
+  const app = setup(); app.window.confirm = () => false;
   await app.form.submit({preventDefault(){}});
   assert.equal(app.calls.length, 0);
 });
