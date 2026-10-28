@@ -1,5 +1,38 @@
 
 document.addEventListener('DOMContentLoaded', () => {
+  const mainNav = document.querySelector('.topbar nav');
+  if (mainNav) {
+    let cachedProfile = {};
+    try { cachedProfile = JSON.parse(localStorage.getItem('libraryProfile') || '{}') || {}; }
+    catch { localStorage.removeItem('libraryProfile'); }
+    const fixedLinks = [
+      ['/user', 'Trang chủ'],
+      ['/user/books', 'Khám phá sách'],
+      ['/user/favorites', 'Yêu thích'],
+      ['/user/borrowed', 'Sách đang mượn'],
+      ['/user/history', 'Lịch sử']
+    ].map(([href, label]) => {
+      let link = mainNav.querySelector(`a[href="${href}"]`);
+      if (!link) {
+        link = document.createElement('a');
+        link.href = href;
+        link.className = 'nav-link';
+        link.textContent = label;
+      }
+      return link;
+    });
+    if (Array.isArray(cachedProfile.roles) && cachedProfile.roles.includes('ROLE_ADMIN')) {
+      let adminLink = mainNav.querySelector('a[href="/admin"]');
+      if (!adminLink) {
+        adminLink = document.createElement('a');
+        adminLink.href = '/admin';
+        adminLink.className = 'nav-link';
+        adminLink.textContent = 'Quản trị';
+      }
+      fixedLinks.push(adminLink);
+    }
+    mainNav.append(...fixedLinks);
+  }
   const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
   document.querySelectorAll('.topbar nav .nav-link').forEach(link => {
     const href = link.getAttribute('href');
@@ -91,11 +124,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const accountPage = ['/user/borrowed', '/user/history'].includes(window.location.pathname);
   const loanPanel = accountPage ? document.querySelector('main .empty-state') : null;
   const token = localStorage.getItem('libraryToken');
-  const mainNav = document.querySelector('.topbar nav');
-  if (mainNav && !mainNav.querySelector('a[href="/user/favorites"]')) {
-    const favoritesLink = document.createElement('a'); favoritesLink.href = '/user/favorites'; favoritesLink.className = 'nav-link'; favoritesLink.textContent = 'Yêu thích'; mainNav.append(favoritesLink);
-  }
-
   function clearSession() {
     localStorage.removeItem('libraryToken');
     localStorage.removeItem('libraryProfile');
@@ -121,10 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
       window.location.href = '/user/login';
     });
     actions.replaceChildren(account, logout);
-    if (Array.isArray(profile.roles) && profile.roles.includes('ROLE_ADMIN')) {
-      const nav = document.querySelector('.topbar nav');
-      if (nav && !nav.querySelector('a[href="/admin"]')) { const admin = document.createElement('a'); admin.href = '/admin'; admin.className = 'nav-link'; admin.textContent = 'Quản trị'; nav.append(admin); }
-    }
     const loginLink = document.getElementById('bookLoginLink');
     const borrowPanel = document.getElementById('bookBorrowPanel');
     if (loginLink) loginLink.hidden = true;

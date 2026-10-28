@@ -48,7 +48,7 @@ Hibernate tạo bảng `book_copies` và hai cột FK kể trên. Runner chuyể
 .\mvnw.cmd spring-boot:run
 ```
 
-Với database mới, cũng chạy cờ migrate một lần để tạo mã cho sách mẫu. Đầu sách thêm qua API sau đó tự sinh mã ngay; không cần bật cờ cho mỗi lần nhập sách.
+Với database mới, cũng chạy cờ migrate một lần để tạo mã cho sách mẫu. Đầu sách mẫu mới được `DataInitializer` thêm sau đó sẽ được cấp mã ngay; đầu sách thêm qua API cũng tự sinh mã. Lần chạy migration đầu tiên còn tạo dữ liệu minh họa liên kết (mượn/quá hạn, phạt, bán, yêu thích, đánh giá, nhật ký) cho tài khoản `demo@library.com` / `demo123`; runner bỏ qua nếu tài khoản này đã có. Nếu mã bị thiếu trên database cũ, chạy lại cờ migrate trong thời gian bảo trì để bổ sung cho các đầu sách chưa có mã.
 
 Lệnh trên chạy được từ thư mục gốc qua wrapper ở root hoặc từ `library` qua wrapper trong module. Nếu không muốn dùng Maven Wrapper, dùng Maven đã cài sẵn: `mvn "-Dspring-boot.run.arguments=--app.book-copies.migrate=true" spring-boot:run`. Nếu Maven báo không mở được khóa trong `.m2/repository`, đóng các tiến trình Maven khác hoặc chuyển kho dependency sang chỗ có quyền ghi: `.\mvnw.cmd "-Dmaven.repo.local=$env:LOCALAPPDATA\maven-cache\repository" "-Dspring-boot.run.arguments=--app.book-copies.migrate=true" spring-boot:run`. Nếu wrapper không tải/cài được chính Maven distribution trong `.m2`, đặt `MAVEN_USER_HOME` sang thư mục ghi được. Nếu app bắt đầu nhưng báo lỗi kết nối, bật MySQL Laragon và kiểm tra `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`.
 

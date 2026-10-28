@@ -51,6 +51,7 @@ public class SecurityConfig {
                                 "/js/**",
                                 "/images/**",
                                 "/user/**",
+                                "/admin",
                                 "/api/v1/auth/**",
                                 "/h2-console/**",
                                 "/*.css",
