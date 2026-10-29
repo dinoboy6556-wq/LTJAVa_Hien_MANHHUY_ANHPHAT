@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.util.Set;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true", matchIfMissing = true)
 @org.springframework.core.annotation.Order(0)
 public class DataInitializer implements CommandLineRunner {
 
