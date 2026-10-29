@@ -35,6 +35,8 @@ public class LoanService {
     @Autowired
     private FineRepository fineRepository;
 
+    @Autowired private ReservationRepository reservations;
+
     public List<Loan> getAllLoans() {
         return loanRepository.findAll();
     }
@@ -77,6 +79,9 @@ public class LoanService {
             }
         }
 
+        for (Long bookId : request.getItems().stream().map(LoanItemRequest::getBookId).distinct().toList()) {
+            reservations.findByUser_EmailAndBook_Id(userEmail, bookId).ifPresent(reservations::delete);
+        }
         loan.setRentalFee(totalRentalFee);
         loan.setItems(items);
 
@@ -102,25 +107,31 @@ public class LoanService {
         BookReturnCondition condition = request == null || request.getCondition() == null
                 ? BookReturnCondition.NORMAL : request.getCondition();
 
+        List<LoanItem> remaining = loan.getItems().stream().filter(i -> i.getReturnedAt() == null).toList();
+        List<Long> ids = request == null ? null : request.getItemIds();
+        if (ids != null && (ids.isEmpty() || ids.stream().anyMatch(java.util.Objects::isNull)
+                || new java.util.HashSet<>(ids).size() != ids.size()
+                || ids.stream().anyMatch(id -> remaining.stream().noneMatch(i -> id.equals(i.getId())))))
+            throw new IllegalArgumentException("Danh sách quyển trả không hợp lệ hoặc đã trả trước đó");
+        List<LoanItem> selected = ids == null ? remaining : remaining.stream().filter(i -> ids.contains(i.getId())).toList();
+        if (selected.isEmpty()) throw new IllegalStateException("Không còn quyển nào cần trả");
         LocalDate today = LocalDate.now();
-        loan.setReturnDate(today);
-        loan.setStatus(LoanStatus.RETURNED);
 
         long overdueDays = Math.max(0, ChronoUnit.DAYS.between(loan.getDueDate(), today));
-        int totalBooks = loan.getItems().stream().mapToInt(LoanItem::getQuantity).sum();
+        int totalBooks = selected.stream().mapToInt(LoanItem::getQuantity).sum();
         BigDecimal overdueFine = BigDecimal.valueOf(overdueDays * 10000L * totalBooks);
         BigDecimal conditionFine = BigDecimal.ZERO;
 
         if (condition == BookReturnCondition.DAMAGED) {
             conditionFine = BigDecimal.valueOf(50000L * totalBooks);
         } else if (condition == BookReturnCondition.LOST) {
-            conditionFine = loan.getItems().stream()
+            conditionFine = selected.stream()
                     .map(item -> item.getBook().getSalePrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
 
         BigDecimal totalFine = overdueFine.add(conditionFine);
-        loan.setFineAmount(totalFine);
+        loan.setFineAmount((loan.getFineAmount() == null ? BigDecimal.ZERO : loan.getFineAmount()).add(totalFine));
 
         if (totalFine.compareTo(BigDecimal.ZERO) > 0) {
             String reason = "Phạt trả quá hạn: " + overdueDays + " ngày";
@@ -132,8 +143,14 @@ public class LoanService {
             fineRepository.save(Fine.builder().loan(loan).amount(totalFine).reason(reason).paid(false).build());
         }
 
-        for (LoanItem item : loan.getItems().stream().sorted(java.util.Comparator.comparing(i -> i.getBook().getId())).toList()) {
+        for (LoanItem item : selected.stream().sorted(java.util.Comparator.comparing(i -> i.getBook().getId())).toList()) {
             copyService.returnCopy(item, condition);
+            item.setReturnedAt(today);
+            item.setReturnCondition(condition);
+        }
+        if (loan.getItems().stream().allMatch(i -> i.getReturnedAt() != null)) {
+            loan.setReturnDate(today);
+            loan.setStatus(LoanStatus.RETURNED);
         }
         return loanRepository.save(loan);
     }

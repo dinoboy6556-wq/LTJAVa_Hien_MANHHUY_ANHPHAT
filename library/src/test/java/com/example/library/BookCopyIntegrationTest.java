@@ -132,7 +132,7 @@ class BookCopyIntegrationTest {
         mvc.perform(get("/api/v1/books/"+book.getId()+"/copies")).andExpect(status().isOk())
             .andExpect(jsonPath("$[0].code").exists()).andExpect(jsonPath("$[0].book").doesNotExist());
         mvc.perform(get("/user/books/"+book.getId())).andExpect(status().isOk())
-            .andExpect(content().string(org.hamcrest.Matchers.containsString("Từng quyển sách")));
+            .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Từng quyển sách"))));
         mvc.perform(post("/api/v1/books/"+book.getId()+"/copies").contentType("application/json").content("{\"quantity\":1}"))
             .andExpect(status().is4xxClientError());
     }
@@ -310,6 +310,92 @@ class BookCopyIntegrationTest {
         mvc.perform(get("/admin")).andExpect(status().isOk())
             .andExpect(content().string(org.hamcrest.Matchers.containsString("adminNav")))
             .andExpect(content().string(org.hamcrest.Matchers.containsString("adminDialog")));
+    }
+
+    @Autowired ReservationRepository reservations;
+    @Autowired CopyEventRepository copyEvents;
+
+    @Test @WithMockUser(username="copies@example.com")
+    void partialReturnsTrackEachItemAndAccumulateOnlyItsFine() {
+        user();Book book=book(2,2);inventory.initialize(book.getId());
+        Loan loan=loanService.createLoan(request(book.getId(),2));loan.setDueDate(LocalDate.now().minusDays(2));
+        LoanItem first=loan.getItems().get(0),second=loan.getItems().get(1);
+        LoanReturnRequest req=new LoanReturnRequest();req.setItemIds(List.of(first.getId()));
+        loanService.returnLoan(loan.getId(),req);
+        assertEquals(LoanStatus.BORROWED,loan.getStatus());assertNull(loan.getReturnDate());assertNotNull(first.getReturnedAt());assertNull(second.getReturnedAt());
+        assertEquals(1,book.getAvailableQuantity());assertEquals(0,new BigDecimal("20000").compareTo(loan.getFineAmount()));
+        assertThrows(IllegalArgumentException.class,()->loanService.returnLoan(loan.getId(),req));
+        req.setItemIds(List.of(second.getId()));req.setCondition(BookReturnCondition.LOST);loanService.returnLoan(loan.getId(),req);
+        assertEquals(LoanStatus.RETURNED,loan.getStatus());assertNotNull(loan.getReturnDate());
+        assertEquals(0,new BigDecimal("140000").compareTo(loan.getFineAmount()));assertEquals(1,book.getAvailableQuantity());
+        assertEquals(3,inventory.history(book.getId(),first.getCopy().getId()).size());
+    }
+
+    @Test @WithMockUser(username="copies@example.com",roles="ADMIN")
+    void metadataEditPreservesInventoryAndValidatesPrices() throws Exception {
+        Book book=book(2,2);inventory.initialize(book.getId());
+        String payload="{\"title\":\"Updated title\",\"totalQuantity\":999,\"rentalPrice\":12,\"salePrice\":30,\"coverImageUrl\":\"/images/book.jpg\"}";
+        mvc.perform(put("/api/v1/books/"+book.getId()).contentType("application/json").content(payload))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.title").value("Updated title"))
+          .andExpect(jsonPath("$.totalQuantity").value(2)).andExpect(jsonPath("$.availableQuantity").value(2));
+        mvc.perform(put("/api/v1/books/"+book.getId()).contentType("application/json").content(payload.replace("\"rentalPrice\":12","\"rentalPrice\":-1")))
+          .andExpect(status().isBadRequest());
+        assertEquals(2,copies.countByBookId(book.getId()));
+    }
+
+    @Test @WithMockUser(username="copies@example.com")
+    void waitlistIsIdempotentAndNotifiesWhenStockReturns() throws Exception {
+        user();Book book=book(1,1);inventory.initialize(book.getId());
+        mvc.perform(put("/api/v1/reservations/"+book.getId())).andExpect(status().isConflict());
+        inventory.take(book.getId(),1,BookCopyStatus.BORROWED);
+        mvc.perform(put("/api/v1/reservations/"+book.getId())).andExpect(status().isOk()).andExpect(jsonPath("$.user").doesNotExist());
+        mvc.perform(put("/api/v1/reservations/"+book.getId())).andExpect(status().isOk());
+        assertEquals(1,reservations.findByUser_EmailOrderByCreatedAtAsc("copies@example.com").size());
+        mvc.perform(get("/api/v1/notifications")).andExpect(jsonPath("$.length()").value(0));
+        inventory.add(book.getId(),1);
+        mvc.perform(get("/api/v1/notifications")).andExpect(jsonPath("$[0].type").value("BOOK_AVAILABLE"));
+        mvc.perform(post("/api/v1/loans").contentType("application/json")
+            .content("{\"days\":14,\"items\":[{\"bookId\":"+book.getId()+",\"quantity\":1}]}"))
+            .andExpect(status().isOk());
+        assertTrue(reservations.findByUser_EmailOrderByCreatedAtAsc("copies@example.com").isEmpty());
+    }
+
+    @Test @WithMockUser(username="copies@example.com")
+    void remindersArePrivateAndExcludeReturnedLoans() throws Exception {
+        user();Book book=book(2,2);inventory.initialize(book.getId());
+        Loan soon=loanService.createLoan(request(book.getId(),1));soon.setDueDate(LocalDate.now().plusDays(2));
+        Loan late=loanService.createLoan(request(book.getId(),1));late.setDueDate(LocalDate.now().minusDays(1));
+        mvc.perform(get("/api/v1/notifications")).andExpect(jsonPath("$.length()").value(2));
+        loanService.returnLoan(soon.getId());
+        mvc.perform(get("/api/v1/notifications")).andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].type").value("OVERDUE"));
+        users.save(User.builder().email("another-notice@example.com").fullName("Other").password("unused").build());
+        mvc.perform(get("/api/v1/notifications").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("another-notice@example.com")))
+          .andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/api/v1/books/"+book.getId()+"/copies/"+late.getItems().get(0).getCopy().getId()+"/history"))
+          .andExpect(status().isForbidden());
+    }
+
+    @Test @WithMockUser(username="copies@example.com",roles="ADMIN")
+    void partialReturnRejectsForeignItemsWithoutChangingStock() throws Exception {
+        user();Book book=book(2,2);inventory.initialize(book.getId());
+        Loan first=loanService.createLoan(request(book.getId(),1));Loan other=loanService.createLoan(request(book.getId(),1));
+        mvc.perform(post("/api/v1/loans/"+first.getId()+"/return").contentType("application/json")
+          .content("{\"itemIds\":["+other.getItems().get(0).getId()+"],\"condition\":\"NORMAL\"}"))
+          .andExpect(status().isBadRequest());
+        assertEquals(0,book.getAvailableQuantity());assertNull(first.getItems().get(0).getReturnedAt());
+    }
+
+    @Test @WithMockUser(username="copies@example.com")
+    void readersCannotEditBookAndCannotSeeOthersWaitlist() throws Exception {
+        user();Book book=book(1,0);inventory.initialize(book.getId());
+        mvc.perform(put("/api/v1/reservations/"+book.getId())).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/reservations").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("other@example.com")))
+          .andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(put("/api/v1/books/"+book.getId()).contentType("application/json")
+          .content("{\"title\":\"No\",\"totalQuantity\":1,\"rentalPrice\":0,\"salePrice\":0}"))
+          .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/v1/reservations/"+book.getId())).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/reservations")).andExpect(jsonPath("$.length()").value(0));
     }
 
 }

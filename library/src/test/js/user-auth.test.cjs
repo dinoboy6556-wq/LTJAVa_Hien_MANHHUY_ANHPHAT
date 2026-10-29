@@ -73,7 +73,8 @@ test('restores account, sends Bearer token and excludes returned loans', async (
   assert.equal(app.calls[0].options.headers.Authorization, 'Bearer test-token');
   assert.equal(app.actions.children[0].textContent, 'Huy');
   assert.equal(app.panel.children.length, 2);
-  assert.equal(app.panel.children[1].children[2].children[0].textContent, '<script>alert(1)</script> — Số lượng: 2');
+  assert.equal(app.panel.children[1].children[2].children[0].children[1].children[0].textContent, '<script>alert(1)</script>');
+  assert.equal(app.panel.children[1].children[2].children[0].children[1].children[2].textContent, 'Số lượng: 2');
   app.actions.children[1].events.click();
   assert.equal(app.storage.has('libraryToken'), false);
   assert.equal(app.storage.has('libraryProfile'), false);
@@ -154,7 +155,7 @@ test('past due borrowed loan displays overdue and cannot be renewed', async () =
   const app = setup({loans:[{id:1,status:'BORROWED',dueDate:'2000-01-01',items:[]}]});
   await flush();
   assert.match(app.panel.children[1].children[0].textContent,/Quá hạn/);
-  assert.equal(app.panel.children[1].children.length,3);
+  assert.equal(app.panel.children[1].children.length,5);
 });
 
 test('renewal sends the selected number of days', async () => {

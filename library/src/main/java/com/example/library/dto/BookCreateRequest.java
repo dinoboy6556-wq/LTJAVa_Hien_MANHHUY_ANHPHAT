@@ -21,8 +21,10 @@ public class BookCreateRequest {
     private Integer totalQuantity;
 
     @NotNull
+    @jakarta.validation.constraints.DecimalMin("0")
     private BigDecimal rentalPrice;
 
     @NotNull
+    @jakarta.validation.constraints.DecimalMin("0")
     private BigDecimal salePrice;
 }
