@@ -28,4 +28,4 @@
 <a class="btn catalog-page-link" th:each="pageNum : ${pageNumbers}" th:href="@{/user/books(q=${q},author=${author},category=${category},min=${min},max=${max},status=${status},sort=${sort},page=${pageNum})}" th:text="${pageNum + 1}" th:classappend="${pageNum == result.number ? ' current-page' : ''}" th:attr="aria-current=${pageNum == result.number ? 'page' : null}">1</a>
 <span th:text="'Trang ' + ${result.number + 1} + ' / ' + ${result.totalPages}"></span>
 <a class="btn" th:if="${result.hasNext()}" th:href="@{/user/books(q=${q},author=${author},category=${category},min=${min},max=${max},status=${status},sort=${sort},page=${result.number + 1})}">Trang sau →</a></nav></main><footer class="footer">mộc. <span>Đọc chậm lại, sống sâu hơn.</span></footer>
-<script th:src="@{/js/user.js}"></script><script th:src="@{/js/reading-tools.js}"></script><script th:src="@{/js/cart-ui.js}"></script></body></html>
+<script th:src="@{/js/user.js}"></script><script th:src="@{/js/reading-tools.js}"></script><script th:src="@{/js/cart-ui.js}"></script><script th:src="@{/js/library-site.js}"></script></body></html>
