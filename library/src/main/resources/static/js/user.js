@@ -1,5 +1,38 @@
 
 document.addEventListener('DOMContentLoaded', () => {
+  const mainNav = document.querySelector('.topbar nav');
+  if (mainNav) {
+    let cachedProfile = {};
+    try { cachedProfile = JSON.parse(localStorage.getItem('libraryProfile') || '{}') || {}; }
+    catch { localStorage.removeItem('libraryProfile'); }
+    const fixedLinks = [
+      ['/user', 'Trang chủ'],
+      ['/user/books', 'Khám phá sách'],
+      ['/user/favorites', 'Yêu thích'],
+      ['/user/borrowed', 'Sách đang mượn'],
+      ['/user/history', 'Lịch sử']
+    ].map(([href, label]) => {
+      let link = mainNav.querySelector(`a[href="${href}"]`);
+      if (!link) {
+        link = document.createElement('a');
+        link.href = href;
+        link.className = 'nav-link';
+        link.textContent = label;
+      }
+      return link;
+    });
+    if (Array.isArray(cachedProfile.roles) && cachedProfile.roles.includes('ROLE_ADMIN')) {
+      let adminLink = mainNav.querySelector('a[href="/admin"]');
+      if (!adminLink) {
+        adminLink = document.createElement('a');
+        adminLink.href = '/admin';
+        adminLink.className = 'nav-link';
+        adminLink.textContent = 'Quản trị';
+      }
+      fixedLinks.push(adminLink);
+    }
+    mainNav.append(...fixedLinks);
+  }
   const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
   document.querySelectorAll('.topbar nav .nav-link').forEach(link => {
     const href = link.getAttribute('href');
@@ -91,7 +124,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const accountPage = ['/user/borrowed', '/user/history'].includes(window.location.pathname);
   const loanPanel = accountPage ? document.querySelector('main .empty-state') : null;
   const token = localStorage.getItem('libraryToken');
-
   function clearSession() {
     localStorage.removeItem('libraryToken');
     localStorage.removeItem('libraryProfile');
@@ -150,6 +182,23 @@ document.addEventListener('DOMContentLoaded', () => {
         books.append(row);
       }
       card.append(title, dates, books);
+      const dueDate = loan.dueDate ? new Date(`${loan.dueDate}T00:00:00`) : null;
+      const canRenew = loan.status === 'BORROWED' && Number(loan.renewalCount || 0) < 1 && dueDate && dueDate >= new Date(new Date().toDateString());
+      if (canRenew) {
+        const renew = document.createElement('button'); renew.type = 'button'; renew.className = 'btn btn-secondary'; renew.textContent = 'Gia hạn thêm 7 ngày';
+        renew.addEventListener('click', async () => {
+          if (!window.confirm('Gia hạn phiếu mượn này thêm 7 ngày?')) return;
+          renew.disabled = true;
+          try {
+            const response = await fetch(`/api/v1/loans/${loan.id}/renew`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.message || 'Không thể gia hạn phiếu mượn.');
+            dates.textContent = `Ngày mượn: ${result.borrowDate || '—'} · Hạn trả mới: ${result.dueDate || '—'}`;
+            renew.textContent = 'Đã gia hạn';
+          } catch (error) { dates.textContent += ` · ${error.message}`; renew.disabled = false; }
+        });
+        card.append(renew);
+      }
       loanPanel.append(card);
     }
   }
@@ -169,6 +218,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!Array.isArray(loans)) throw new Error('Dữ liệu phiếu mượn không hợp lệ.');
         showAccount();
         showLoans(loans);
+        if (loanPanel) fetch('/api/v1/fines/my-fines', { headers: { Authorization: `Bearer ${token}` } }).then(async response => {
+          if (!response.ok) throw new Error('Chưa tải được danh sách khoản phạt.');
+          const fines = await response.json();
+          if (!fines.length) return;
+          const section = document.createElement('section'); section.className = 'fine-list';
+          const heading = document.createElement('h3'); heading.textContent = 'Khoản phạt'; section.append(heading);
+          for (const fine of fines) {
+            const row = document.createElement('p');
+            row.textContent = `Phiếu #${fine.loan?.id || '—'} · ${fine.reason || 'Khoản phạt'} · ${Number(fine.amount || 0).toLocaleString('vi-VN')} đ · ${fine.paid ? 'Đã thanh toán' : 'Chưa thanh toán'}`;
+            section.append(row);
+          }
+          loanPanel.append(section);
+        }).catch(() => {});
       })
       .catch(error => {
         if (loanPanel) loanPanel.textContent = error.message || 'Không thể kết nối máy chủ.';

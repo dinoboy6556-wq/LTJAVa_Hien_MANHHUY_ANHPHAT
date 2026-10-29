@@ -43,6 +43,11 @@ public class UserPageController {
             results = org.springframework.data.domain.Page.empty(); model.addAttribute("filterError",ex.getMessage());
         }
         model.addAttribute("books",results.getContent()); model.addAttribute("result",results);
+        int firstPage = Math.max(0, results.getNumber() - 2);
+        int lastPage = Math.min(results.getTotalPages() - 1, results.getNumber() + 2);
+        model.addAttribute("pageNumbers", firstPage <= lastPage
+                ? java.util.stream.IntStream.rangeClosed(firstPage, lastPage).boxed().toList()
+                : List.of());
         model.addAttribute("q",q); model.addAttribute("author",author); model.addAttribute("category",category);
         model.addAttribute("min",min); model.addAttribute("max",max); model.addAttribute("status",status); model.addAttribute("sort",sort);
         return "user/books";
@@ -79,4 +84,7 @@ public class UserPageController {
     public String history() {
         return "user/history";
     }
+
+    @GetMapping("/user/favorites")
+    public String favorites() { return "user/favorites"; }
 }

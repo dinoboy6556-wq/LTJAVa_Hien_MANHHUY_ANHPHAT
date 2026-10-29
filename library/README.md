@@ -15,6 +15,7 @@ Dự án được triển khai trên nền tảng **Java 21**, **Spring Boot 3.2
 2. **Quản Lý Danh Mục & Kho Sách (Books & Inventory)**:
    - CRUD các thực thể: `Book`, `Category`, `Author`, `Publisher`.
    - Tự động quản lý số lượng tồn kho `availableQuantity` và cập nhật trạng thái `OUT_OF_STOCK`.
+   - Trang khám phá sách phân trang 12 đầu sách/trang, có nút chọn số trang và giữ bộ lọc khi chuyển trang.
 
 3. **Nghiệp Vụ Bán Sách (Sales Management)**:
    - Lập hóa đơn bán lẻ sách.
@@ -61,3 +62,11 @@ Dự án được triển khai trên nền tảng **Java 21**, **Spring Boot 3.2
 4. **Tài Khoản Mẫu Đã Seed Tự Động (`DataInitializer`)**:
    - **Tài khoản Admin**: `admin@library.com` / `admin123`
    - **Tài khoản Khách hàng**: `user@library.com` / `user123`
+   - Lần chạy đầu, hệ thống tự thêm danh mục, tác giả, nhà xuất bản và 24 đầu sách mẫu để danh mục có nhiều trang. Khi chạy lại trên cùng database, dữ liệu mẫu không bị thêm trùng; dữ liệu hiện có được giữ nguyên.
+
+5. **Nạp dữ liệu mẫu vào MySQL**:
+   - Khởi động MySQL và tạo database `library_db` nếu chưa có.
+   - Kiểm tra `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` trong `application.yml` hoặc biến môi trường.
+   - Chạy ứng dụng bằng `mvnw.cmd spring-boot:run` từ thư mục `library`. `DataInitializer` sẽ tự nạp dữ liệu khi ứng dụng khởi động.
+   - Các bản ghi đầu sách mẫu xuất hiện ở trang khám phá sách và trong trang quản trị. Dữ liệu này là dữ liệu minh họa; số lượng và giá có thể chỉnh trong `DataInitializer`.
+   - Khi chạy migration mã quyển với `app.book-copies.migrate=true`, hệ thống còn thêm một tài khoản `demo@library.com` / `demo123` cùng dữ liệu minh họa liên kết cho mượn, tiền phạt, bán sách, yêu thích, đánh giá và nhật ký. Tồn kho được cập nhật qua trạng thái mã quyển; dữ liệu demo chỉ được tạo một lần.

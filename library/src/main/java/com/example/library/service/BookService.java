@@ -49,6 +49,8 @@ public class BookService {
         Book book = Book.builder()
                 .title(req.getTitle())
                 .isbn(req.getIsbn())
+                .coverImageUrl(req.getCoverImageUrl())
+                .description(req.getDescription())
                 .category(category)
                 .author(author)
                 .publisher(publisher)

@@ -39,7 +39,7 @@ function setup({ pathname = '/user/borrowed', token = 'test-token', status = 200
     setTimeout: fn => fn(),
     fetch: async (url, options) => {
       calls.push({ url, options });
-      return { status, ok: status < 400, json: async () => url.endsWith('/login') ? loginResponse : loans };
+      return { status, ok: status < 400, json: async () => url.endsWith('/login') ? loginResponse : url.endsWith('/my-fines') ? [] : loans };
     }
   };
   vm.runInNewContext(source, context);

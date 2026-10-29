@@ -34,6 +34,10 @@ public class Loan {
     @Column(name = "fine_amount")
     private BigDecimal fineAmount;
 
+    @Column(name = "renewal_count", nullable = false, columnDefinition = "integer default 0")
+    @Builder.Default
+    private Integer renewalCount = 0;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private LoanStatus status;
