@@ -1,0 +1,142 @@
+USE library_db;
+SET NAMES utf8mb4;
+
+-- 1. Đăng ký chờ sách
+CREATE TABLE IF NOT EXISTS reservations (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    book_id BIGINT NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    CONSTRAINT uk_reservation_user_book UNIQUE (user_id, book_id),
+    CONSTRAINT fk_reservation_user
+        FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_reservation_book
+        FOREIGN KEY (book_id) REFERENCES books(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 2. Lịch sử trạng thái từng quyển sách
+CREATE TABLE IF NOT EXISTS copy_events (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    copy_id BIGINT NOT NULL,
+    action VARCHAR(255) NOT NULL,
+    previous_status VARCHAR(255) NULL,
+    new_status VARCHAR(255) NOT NULL,
+    actor VARCHAR(255) NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    INDEX idx_copy_events_copy (copy_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 3. Thanh toán phí mượn
+CREATE TABLE IF NOT EXISTS borrow_payments (
+    id VARCHAR(32) NOT NULL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    request_key VARCHAR(64) NOT NULL,
+    amount DECIMAL(19,2) NOT NULL,
+    status VARCHAR(30) NOT NULL,
+    request_json TEXT NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    expires_at DATETIME(6) NOT NULL,
+    loan_id BIGINT NULL,
+    transaction_no VARCHAR(255) NULL,
+    message VARCHAR(1000) NULL,
+    method VARCHAR(20) NOT NULL DEFAULT 'VNPAY',
+    confirmed_by VARCHAR(255) NULL,
+    confirmed_at DATETIME(6) NULL,
+    CONSTRAINT uk_borrow_payment_request UNIQUE (user_id, request_key),
+    CONSTRAINT fk_borrow_payment_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 4. Nội dung thư viện
+CREATE TABLE IF NOT EXISTS library_content (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    kind VARCHAR(20) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(120) NOT NULL UNIQUE,
+    body LONGTEXT,
+    link VARCHAR(500),
+    book_id BIGINT,
+    published BIT NOT NULL DEFAULT 0,
+    sort_order INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 5. Bổ sung cột trả từng phần nếu chưa có
+SET @ddl = IF(
+    EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'loan_items'
+          AND column_name = 'returned_at'
+    ),
+    'SELECT 1',
+    'ALTER TABLE loan_items ADD COLUMN returned_at DATE NULL'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = IF(
+    EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'loan_items'
+          AND column_name = 'return_condition'
+    ),
+    'SELECT 1',
+    'ALTER TABLE loan_items ADD COLUMN return_condition VARCHAR(30) NULL'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Đồng bộ ngày trả cho các phiếu cũ đã trả xong
+UPDATE loan_items i
+JOIN loans l ON l.id = i.loan_id
+SET i.returned_at = l.return_date
+WHERE l.status = 'RETURNED'
+  AND i.returned_at IS NULL
+  AND l.return_date IS NOT NULL;
+
+-- 6. Nếu đã tạo borrow_payments bản cũ,
+-- bổ sung các cột thanh toán trực tiếp còn thiếu
+SET @ddl = IF(
+    EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'borrow_payments'
+          AND column_name = 'method'
+    ),
+    'SELECT 1',
+    'ALTER TABLE borrow_payments ADD COLUMN method VARCHAR(20) NOT NULL DEFAULT ''VNPAY'''
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = IF(
+    EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'borrow_payments'
+          AND column_name = 'confirmed_by'
+    ),
+    'SELECT 1',
+    'ALTER TABLE borrow_payments ADD COLUMN confirmed_by VARCHAR(255) NULL'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl = IF(
+    EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'borrow_payments'
+          AND column_name = 'confirmed_at'
+    ),
+    'SELECT 1',
+    'ALTER TABLE borrow_payments ADD COLUMN confirmed_at DATETIME(6) NULL'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
