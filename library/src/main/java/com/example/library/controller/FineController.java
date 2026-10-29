@@ -15,6 +15,10 @@ public class FineController {
     private final FineRepository fines;
     public FineController(FineRepository fines) { this.fines = fines; }
 
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
+    public List<Fine> list() { return fines.findAll(); }
+
     @GetMapping("/my-fines")
     public List<Fine> myFines(Authentication auth) { return fines.findByLoan_User_EmailOrderByCreatedAtDesc(auth.getName()); }
 

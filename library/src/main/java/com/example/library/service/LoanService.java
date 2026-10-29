@@ -140,6 +140,12 @@ public class LoanService {
 
     @Transactional
     public Loan renewLoan(Long loanId) {
+        return renewLoan(loanId, 7);
+    }
+
+    @Transactional
+    public Loan renewLoan(Long loanId, int days) {
+        if (days < 1 || days > 7) throw new IllegalArgumentException("Chọn từ 1 đến 7 ngày gia hạn");
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         Loan loan = loanRepository.findForUpdate(loanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mượn ID: " + loanId));
@@ -151,7 +157,7 @@ public class LoanService {
             throw new IllegalStateException("Mỗi phiếu chỉ được gia hạn một lần");
         if (fineRepository.findByLoan(loan).stream().anyMatch(fine -> !Boolean.TRUE.equals(fine.getPaid())))
             throw new IllegalStateException("Hãy thanh toán khoản phạt trước khi gia hạn");
-        loan.setDueDate(loan.getDueDate().plusDays(7));
+        loan.setDueDate(loan.getDueDate().plusDays(days));
         loan.setRenewalCount((loan.getRenewalCount() == null ? 0 : loan.getRenewalCount()) + 1);
         return loanRepository.save(loan);
     }

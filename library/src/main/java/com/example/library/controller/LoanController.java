@@ -41,8 +41,11 @@ public class LoanController {
         return ResponseEntity.ok(loanService.returnLoan(id, request));
     }
 
+    public record RenewalRequest(@jakarta.validation.constraints.NotNull
+            @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(7) Integer days) {}
+
     @PostMapping("/{id}/renew")
-    public ResponseEntity<Loan> renewLoan(@PathVariable Long id) {
-        return ResponseEntity.ok(loanService.renewLoan(id));
+    public ResponseEntity<Loan> renewLoan(@PathVariable Long id, @Valid @RequestBody(required = false) RenewalRequest request) {
+        return ResponseEntity.ok(loanService.renewLoan(id, request == null ? 7 : request.days()));
     }
 }

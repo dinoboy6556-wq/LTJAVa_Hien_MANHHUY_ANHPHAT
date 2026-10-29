@@ -25,16 +25,20 @@ public class FavoriteController {
     @GetMapping
     public List<Favorite> list(Authentication auth) { return favorites.findByUser_EmailOrderByCreatedAtDesc(auth.getName()); }
 
+    @org.springframework.transaction.annotation.Transactional
     @PutMapping("/{bookId}")
     public Favorite add(Authentication auth, @PathVariable Long bookId) {
-        if (favorites.existsByUser_EmailAndBook_Id(auth.getName(), bookId))
-            return favorites.findByUser_EmailOrderByCreatedAtDesc(auth.getName()).stream()
-                    .filter(f -> f.getBook().getId().equals(bookId)).findFirst().orElseThrow();
-        User user = users.findByEmail(auth.getName()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản"));
+        User user = users.findForUpdateByEmail(auth.getName()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản"));
+        var existing = favorites.findByUser_EmailAndBook_Id(auth.getName(), bookId);
+        if (existing.isPresent()) return existing.get();
         Book book = books.findById(bookId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sách"));
         return favorites.save(Favorite.builder().user(user).book(book).build());
     }
 
+    @org.springframework.transaction.annotation.Transactional
     @DeleteMapping("/{bookId}")
-    public void remove(Authentication auth, @PathVariable Long bookId) { favorites.deleteByUser_EmailAndBook_Id(auth.getName(), bookId); }
+    public void remove(Authentication auth, @PathVariable Long bookId) {
+        users.findForUpdateByEmail(auth.getName()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản"));
+        favorites.deleteByUser_EmailAndBook_Id(auth.getName(), bookId);
+    }
 }

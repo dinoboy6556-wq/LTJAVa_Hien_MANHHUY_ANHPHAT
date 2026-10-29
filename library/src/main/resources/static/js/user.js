@@ -181,7 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const loan of visible) {
       const card = document.createElement('article');
       const title = document.createElement('h3');
-      title.textContent = `Phiếu #${loan.id} — ${statuses[loan.status] || loan.status}`;
+      const overdue = loan.status === 'BORROWED' && loan.dueDate && loan.dueDate < new Date().toLocaleDateString('sv-SE');
+      title.textContent = `Phiếu #${loan.id} — ${overdue ? statuses.OVERDUE : (statuses[loan.status] || loan.status)}`;
       const dates = document.createElement('p');
       dates.textContent = `Ngày mượn: ${loan.borrowDate || '—'} · Hạn trả: ${loan.dueDate || '—'}${loan.returnDate ? ' · Ngày trả: ' + loan.returnDate : ''}`;
       const books = document.createElement('ul');
@@ -194,19 +195,28 @@ document.addEventListener('DOMContentLoaded', () => {
       const dueDate = loan.dueDate ? new Date(`${loan.dueDate}T00:00:00`) : null;
       const canRenew = loan.status === 'BORROWED' && Number(loan.renewalCount || 0) < 1 && dueDate && dueDate >= new Date(new Date().toDateString());
       if (canRenew) {
-        const renew = document.createElement('button'); renew.type = 'button'; renew.className = 'btn btn-secondary'; renew.textContent = 'Gia hạn thêm 7 ngày';
+        const renewal = document.createElement('div'); renewal.className = 'renewal-controls';
+        const label = document.createElement('label'); label.textContent = 'Thời gian gia hạn ';
+        const duration = document.createElement('select'); duration.setAttribute('aria-label', 'Số ngày gia hạn');
+        for (let day = 1; day <= 7; day++) {
+          const option = document.createElement('option'); option.value = String(day); option.textContent = `${day} ngày`; duration.append(option);
+        }
+        duration.value = '7'; label.append(duration);
+        const renew = document.createElement('button'); renew.type = 'button'; renew.className = 'btn btn-secondary'; renew.textContent = 'Gia hạn';
         renew.addEventListener('click', async () => {
-          if (!window.confirm('Gia hạn phiếu mượn này thêm 7 ngày?')) return;
+          const days = Number(duration.value);
+          if (renew.disabled || !window.confirm(`Gia hạn phiếu mượn này thêm ${days} ngày?`)) return;
+          duration.disabled = true;
           renew.disabled = true;
           try {
-            const response = await fetch(`/api/v1/loans/${loan.id}/renew`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+            const response = await fetch(`/api/v1/loans/${loan.id}/renew`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ days }) });
             const result = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(result.message || 'Không thể gia hạn phiếu mượn.');
             dates.textContent = `Ngày mượn: ${result.borrowDate || '—'} · Hạn trả mới: ${result.dueDate || '—'}`;
             renew.textContent = 'Đã gia hạn';
-          } catch (error) { dates.textContent += ` · ${error.message}`; renew.disabled = false; }
+          } catch (error) { dates.textContent += ` · ${error.message}`; renew.disabled = false; duration.disabled = false; }
         });
-        card.append(renew);
+        renewal.append(label, renew); card.append(renewal);
       }
       loanPanel.append(card);
     }

@@ -21,7 +21,7 @@ function setup({ pathname = '/user/borrowed', token = 'test-token', status = 200
   form.querySelector = selector => selector === '#authMessage' ? message : selector.startsWith('button') ? button : null;
   const nav = new Element();
   nav.querySelector = selector => nav.children.find(link => selector === `a[href="${link.href}"]`);
-  const window = { location: { pathname } };
+  const window = { location: { pathname }, confirm: () => true };
   const calls = [];
   const links = ['/user', '/user/books', '/user/borrowed', '/user/history'].map(href => ({
     href, selected: false, attributes: {},
@@ -148,4 +148,20 @@ test('reader does not receive an admin navigation link', async () => {
   const app = setup({ pathname: '/user', roles: ['ROLE_USER'] });
   await flush();
   assert.equal(app.nav.children.some(link => link.href === '/admin'), false);
+});
+
+test('past due borrowed loan displays overdue and cannot be renewed', async () => {
+  const app = setup({loans:[{id:1,status:'BORROWED',dueDate:'2000-01-01',items:[]}]});
+  await flush();
+  assert.match(app.panel.children[1].children[0].textContent,/Quá hạn/);
+  assert.equal(app.panel.children[1].children.length,3);
+});
+
+test('renewal sends the selected number of days', async () => {
+ const app=setup({loans:[{id:12,status:'BORROWED',dueDate:'2099-01-01',items:[]}]});await flush();
+ const controls=app.panel.children[1].children[3];const select=controls.children[0].children[0];
+ assert.equal(select.children.length,7);select.value='3';
+ await controls.children[1].events.click();
+ const request=app.calls.find(c=>c.url.endsWith('/12/renew'));
+ assert.equal(JSON.parse(request.options.body).days,3);
 });

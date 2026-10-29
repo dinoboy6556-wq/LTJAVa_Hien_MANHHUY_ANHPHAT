@@ -194,4 +194,122 @@ class BookCopyIntegrationTest {
         mvc.perform(get("/user/books").param("min","100").param("max","1"))
             .andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("Khoảng phí mượn")));
     }
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
+    @Autowired FineRepository fines;
+
+    @Test @WithMockUser(username = "copies@example.com")
+    void renewalChecksOwnershipDueDateAndLimit() {
+        user(); Book book=book(1,1); inventory.initialize(book.getId());
+        Loan loan=loanService.createLoan(request(book.getId(),1));
+        LocalDate due=loan.getDueDate();
+        loanService.renewLoan(loan.getId());
+        assertEquals(due.plusDays(7),loan.getDueDate());
+        assertEquals(1,loan.getRenewalCount());
+        assertThrows(IllegalStateException.class,()->loanService.renewLoan(loan.getId()));
+    }
+
+    @Test @WithMockUser(username = "copies@example.com")
+    void overdueReturnCreatesOneFineAndRestoresExactCopy() {
+        user(); Book book=book(1,1); inventory.initialize(book.getId());
+        Loan loan=loanService.createLoan(request(book.getId(),1));
+        Long copyId=loan.getItems().get(0).getCopy().getId();
+        loan.setDueDate(LocalDate.now().minusDays(2));
+        assertThrows(IllegalStateException.class,()->loanService.renewLoan(loan.getId()));
+        loanService.returnLoan(loan.getId());
+        assertEquals(0,new BigDecimal("20000").compareTo(loan.getFineAmount()));
+        assertEquals(BookCopyStatus.AVAILABLE,copies.findById(copyId).orElseThrow().getStatus());
+        assertEquals(1,fines.findByLoan(loan).size());
+        assertThrows(IllegalStateException.class,()->loanService.returnLoan(loan.getId()));
+        assertEquals(1,fines.findByLoan(loan).size());
+    }
+
+    @Test @WithMockUser(username = "copies@example.com")
+    void readerCannotReturnOrRenewSomeoneElsesLoan() throws Exception {
+        User owner=users.save(User.builder().email("owner@example.com").fullName("Owner").password("unused").build());
+        Loan loan=loans.save(Loan.builder().user(owner).borrowDate(LocalDate.now()).dueDate(LocalDate.now().plusDays(14))
+            .rentalFee(BigDecimal.ZERO).status(LoanStatus.BORROWED).build());
+        mvc.perform(post("/api/v1/loans/"+loan.getId()+"/return")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/loans/"+loan.getId()+"/renew")).andExpect(status().isForbidden());
+        assertEquals(LoanStatus.BORROWED,loan.getStatus());
+    }
+
+    @Test @WithMockUser(username = "rollback@example.com")
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void failedMultiBookLoanRollsBackPreviouslyAllocatedCopy() {
+        users.save(User.builder().email("rollback@example.com").fullName("Rollback").password("unused").build());
+        Book first=book(1,1), second=book(1,0);
+        inventory.initialize(first.getId()); inventory.initialize(second.getId());
+        LoanCreateRequest req=request(first.getId(),1);
+        LoanItemRequest missing=new LoanItemRequest();missing.setBookId(second.getId());missing.setQuantity(1);
+        req.setItems(List.of(req.getItems().get(0),missing));
+        long before=loans.count();
+        assertThrows(IllegalStateException.class,()->loanService.createLoan(req));
+        assertEquals(before,loans.count());
+        assertEquals(1,copies.countByBookIdAndStatus(first.getId(),BookCopyStatus.AVAILABLE));
+        assertEquals(1,books.findById(first.getId()).orElseThrow().getAvailableQuantity());
+    }
+
+    @Test @WithMockUser(username = "copies@example.com")
+    void unpaidFineAndReturnedLoanCannotBeRenewed() {
+        user(); Book book=book(1,1); inventory.initialize(book.getId());
+        Loan loan=loanService.createLoan(request(book.getId(),1));
+        Fine fine=fines.save(Fine.builder().loan(loan).amount(BigDecimal.TEN).reason("Unpaid").paid(false).build());
+        assertThrows(IllegalStateException.class,()->loanService.renewLoan(loan.getId()));
+        fine.setPaid(true); fines.save(fine);
+        loanService.returnLoan(loan.getId());
+        assertThrows(IllegalStateException.class,()->loanService.renewLoan(loan.getId()));
+    }
+
+    @Test @WithMockUser(username = "return-rollback@example.com")
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void failedReturnRollsBackCopyLoanAndFine() {
+        users.save(User.builder().email("return-rollback@example.com").fullName("Return rollback").password("unused").build());
+        Book book=book(2,2); inventory.initialize(book.getId());
+        Loan loan=loanService.createLoan(request(book.getId(),2));
+        var tx=new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        tx.executeWithoutResult(status -> {
+            Loan stored=loans.findById(loan.getId()).orElseThrow();
+            stored.setDueDate(LocalDate.now().minusDays(2));
+            stored.getItems().get(1).getCopy().setStatus(BookCopyStatus.UNAVAILABLE);
+        });
+        long before=fines.count();
+        assertThrows(IllegalStateException.class,()->loanService.returnLoan(loan.getId()));
+        assertEquals(before,fines.count());
+        assertEquals(1,copies.countByBookIdAndStatus(book.getId(),BookCopyStatus.BORROWED));
+        assertEquals(0,copies.countByBookIdAndStatus(book.getId(),BookCopyStatus.AVAILABLE));
+        assertEquals(0,books.findById(book.getId()).orElseThrow().getAvailableQuantity());
+        Loan stored=loans.findById(loan.getId()).orElseThrow();
+        assertEquals(LoanStatus.BORROWED,stored.getStatus());
+        assertNull(stored.getReturnDate());
+    }
+
+    @Test @WithMockUser(username = "copies@example.com")
+    void renewalUsesSelectedDaysAndRejectsInvalidInput() throws Exception {
+        user(); Book book=book(1,1); inventory.initialize(book.getId());
+        Loan loan=loanService.createLoan(request(book.getId(),1));
+        LocalDate original=loan.getDueDate();
+        for(String body : List.of("{\"days\":0}","{\"days\":8}","{\"days\":null}")) {
+            mvc.perform(post("/api/v1/loans/"+loan.getId()+"/renew").contentType("application/json").content(body))
+                .andExpect(status().isBadRequest());
+        }
+        assertEquals(original,loan.getDueDate());
+        mvc.perform(post("/api/v1/loans/"+loan.getId()+"/renew").contentType("application/json").content("{\"days\":3}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.dueDate").value(original.plusDays(3).toString()));
+        assertEquals(1,loan.getRenewalCount());
+    }
+
+    @Test @WithMockUser(roles="USER")
+    void readerCannotListOrSettleAllFines() throws Exception {
+        mvc.perform(get("/api/v1/fines")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/fines/999/mark-paid")).andExpect(status().isForbidden());
+    }
+
+    @Test @WithMockUser(roles="ADMIN")
+    void adminCanListFinesAndDashboardRenders() throws Exception {
+        mvc.perform(get("/api/v1/fines")).andExpect(status().isOk());
+        mvc.perform(get("/admin")).andExpect(status().isOk())
+            .andExpect(content().string(org.hamcrest.Matchers.containsString("adminNav")))
+            .andExpect(content().string(org.hamcrest.Matchers.containsString("adminDialog")));
+    }
+
 }
