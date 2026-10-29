@@ -80,7 +80,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   function editUser(user){const body=openDialog(`Tài khoản — ${user.email}`),form=el('form',null,'admin-form');
     const enabled=selectField(form,'Trạng thái',[['true','Hoạt động'],['false','Khóa']],String(user.enabled));
-    const checks=['ROLE_ADMIN','ROLE_LIBRARIAN','ROLE_USER'].map(role=>{const label=el('label',role.replace('ROLE_',''));const input=el('input');input.type='checkbox';input.checked=user.roles.includes(role);input.value=role;label.append(input);form.append(label);return input;});
+    const protectedAdmin=user.roles.includes('ROLE_ADMIN');enabled.disabled=protectedAdmin;
+    if(protectedAdmin)body.append(el('p','Tài khoản quản trị được bảo vệ: không thể khóa hoặc gỡ quyền ADMIN.'));
+    const checks=['ROLE_ADMIN','ROLE_LIBRARIAN','ROLE_USER'].map(role=>{const label=el('label',role.replace('ROLE_',''));const input=el('input');input.type='checkbox';input.checked=user.roles.includes(role);input.value=role;if(protectedAdmin&&role==='ROLE_ADMIN')input.disabled=true;label.append(input);form.append(label);return input;});
     submitForm(form,'Lưu tài khoản',async()=>{const roles=checks.filter(i=>i.checked).map(i=>i.value);if(!roles.length)throw new Error('Chọn ít nhất một vai trò.');if(!confirm(`Cập nhật quyền và trạng thái của ${user.email}?`))return;await request(`/api/v1/admin/users/${user.id}`,{method:'PUT',body:JSON.stringify({enabled:enabled.value==='true',roles})});await saved('Đã cập nhật tài khoản.');});body.append(form);
   }
   async function bookForm(existing=null){
@@ -122,7 +124,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         cells.push(`#${row.id}`, row.user?.fullName||'—', row.user?.email||'—', titles, grouped.map(g=>String(g.quantity)), codes, row.borrowDate||'—',row.dueDate||'—',labels[loanStatus(row)]||row.status);if(row.status!=='RETURNED')controls.append(action('Nhận trả',()=>returnLoan(row)));else controls.append(el('span',`Đã trả ${row.returnDate||''}`));}
       if(section==='fines'){cells.push(`#${row.id}`,row.loan?.user?.email||'—',`#${row.loan?.id||'—'}`,row.reason||'—',money(row.amount),labels[status(row)]);if(!row.paid)controls.append(action('Xác nhận đã thu',async()=>{if(!confirm(`Đã nhận ${money(row.amount)} cho khoản phạt #${row.id}?`))return;await request(`/api/v1/fines/${row.id}/mark-paid`,{method:'POST'});await load();$('adminMessage').textContent='Đã xác nhận thanh toán khoản phạt.';}));}
       if(section==='sales'){cells.push(`#${row.id}`,row.user?.email||'—',row.createdAt?.replace('T',' ').slice(0,19)||'—',(row.items||[]).map(i=>`${i.book?.title||''} × ${i.quantity}`).join('; '),money(row.totalAmount));controls=null;}
-      if(section==='users'){cells.push(row.fullName,row.email,row.phone||'—',row.address||'—',row.roles.map(r=>r.replace('ROLE_','')).join(', '),labels[status(row)]);controls.append(action('Chỉnh sửa',()=>editUser(row)));}
+      if(section==='users'){cells.push(row.fullName,row.email,row.phone||'—',row.address||'—',row.roles.map(r=>r.replace('ROLE_','')).join(', '),labels[status(row)]);controls.append(action('Chỉnh sửa',()=>editUser(row)));
+        if(row.roles.includes('ROLE_ADMIN'))controls.append(el('span','Admin được bảo vệ','admin-badge'));
+        else controls.append(action(row.enabled?'Khóa tài khoản':'Mở khóa',async()=>{
+          if(!confirm(`${row.enabled?'Khóa':'Mở khóa'} tài khoản ${row.email}?${row.enabled?' Tài khoản sẽ bị chặn ở lần gọi API tiếp theo.':''}`))return;
+          await request(`/api/v1/admin/users/${row.id}/status`,{method:'PATCH',body:JSON.stringify({enabled:!row.enabled})});
+          await load();$('adminMessage').textContent=row.enabled?'Đã khóa tài khoản.':'Đã mở khóa tài khoản.';
+        }));}
       cells.forEach((value,index)=>{const td=el('td');if(Array.isArray(value)){value.forEach(text=>td.append(el('div',text,'admin-cell-line')));}else td.textContent=value;if(section==='loans')td.className=`loan-column-${index}`;tr.append(td);});if(controls){const td=el('td');td.append(controls);tr.append(td);}$('adminRows').append(tr);
     }
     if(!filtered.length){const tr=el('tr'),td=el('td','Không có dữ liệu phù hợp.');td.colSpan=columns[section].length;tr.append(td);$('adminRows').append(tr);}
