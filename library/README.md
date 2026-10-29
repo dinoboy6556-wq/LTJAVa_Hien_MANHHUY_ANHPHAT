@@ -1,12 +1,14 @@
 # HỆ THỐNG QUẢN LÝ THƯ VIỆN & TỒN KHO - DỰ ÁN TUẦN 4 (TUẦN 43)
 
 ## 📌 Giới Thiệu
+
 Dự án **Library Management System** được phát triển bởi nhóm 3 thành viên (**Lê Trần Minh Hiền, MẠNH HUY, ANH PHÁT**) cho môn Lập Trình Java.
 Dự án được triển khai trên nền tảng **Java 21**, **Spring Boot 3.2.4**, **Spring Security (JWT)**, **Spring Data JPA**, và cơ sở dữ liệu **H2 In-Memory / MySQL**.
 
 ---
 
 ## 🚀 Các Tính Năng Đã Hoàn Thành Trong Tuần 4 (Tuần 43)
+
 1. **Quản Lý Xác Thực & Phân Quyền (Authentication & Authorization)**:
    - Đăng ký / Đăng nhập sinh mã JWT Token.
    - Phân quyền theo các vai trò: `ROLE_ADMIN`, `ROLE_LIBRARIAN`, `ROLE_USER`.
@@ -42,11 +44,13 @@ Dự án được triển khai trên nền tảng **Java 21**, **Spring Boot 3.2
 ---
 
 ## 🛠️ Hướng Dẫn Khởi Chạy Dự Án
+
 1. **Yêu cầu môi trường**:
    - JDK 21+
    - Maven 3.8+
 
 2. **Các bước chạy ứng dụng**:
+
    ```bash
    # Di chuyển vào thư mục project
    cd library
