@@ -2,9 +2,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   const mainNav = document.querySelector('.topbar nav');
   if (mainNav) {
-    let cachedProfile = {};
-    try { cachedProfile = JSON.parse(localStorage.getItem('libraryProfile') || '{}') || {}; }
-    catch { localStorage.removeItem('libraryProfile'); }
     const fixedLinks = [
       ['/user', 'Trang chủ'],
       ['/user/books', 'Khám phá sách'],
@@ -21,16 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return link;
     });
-    if (Array.isArray(cachedProfile.roles) && cachedProfile.roles.includes('ROLE_ADMIN')) {
-      let adminLink = mainNav.querySelector('a[href="/admin"]');
-      if (!adminLink) {
-        adminLink = document.createElement('a');
-        adminLink.href = '/admin';
-        adminLink.className = 'nav-link';
-        adminLink.textContent = 'Quản trị';
-      }
-      fixedLinks.push(adminLink);
-    }
     mainNav.append(...fixedLinks);
   }
   const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
@@ -127,6 +114,27 @@ document.addEventListener('DOMContentLoaded', () => {
   function clearSession() {
     localStorage.removeItem('libraryToken');
     localStorage.removeItem('libraryProfile');
+    mainNav?.querySelector('a[href="/admin"]')?.remove();
+  }
+
+  function updateAdminLink(profile) {
+    if (!mainNav) return;
+    let link = mainNav.querySelector('a[href="/admin"]');
+    if (!Array.isArray(profile.roles) || !profile.roles.includes('ROLE_ADMIN')) {
+      link?.remove();
+      return;
+    }
+    if (!link) {
+      link = document.createElement('a');
+      link.href = '/admin';
+      link.className = 'nav-link';
+      link.textContent = 'Quản trị';
+      mainNav.append(link);
+    }
+    const selected = currentPath === '/admin' || currentPath.startsWith('/admin/');
+    link.classList.toggle('active', selected);
+    if (selected) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
   }
 
   function showAccount() {
@@ -135,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let profile = {};
     try { profile = JSON.parse(localStorage.getItem('libraryProfile') || '{}') || {}; }
     catch { localStorage.removeItem('libraryProfile'); }
+    updateAdminLink(profile);
     const account = document.createElement('a');
     account.className = 'login-link';
     account.href = '/user/profile';
@@ -206,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Normal page navigation cannot attach a Bearer header. Load private data via fetch.
   if (token) {
     if (loanPanel) loanPanel.textContent = 'Đang tải tài khoản...';
-    fetch('/api/v1/loans/my-loans', { headers: { Authorization: `Bearer ${token}` } })
+    fetch('/api/v1/profile', { headers: { Authorization: `Bearer ${token}` } })
       .then(async response => {
         if (response.status === 401 || response.status === 403) {
           clearSession();
@@ -214,9 +223,14 @@ document.addEventListener('DOMContentLoaded', () => {
           throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         }
         if (!response.ok) throw new Error('Chưa tải được tài khoản. Vui lòng tải lại trang.');
-        const loans = await response.json();
-        if (!Array.isArray(loans)) throw new Error('Dữ liệu phiếu mượn không hợp lệ.');
+        const profile = await response.json();
+        localStorage.setItem('libraryProfile', JSON.stringify(profile));
         showAccount();
+        if (!loanPanel) return;
+        const loanResponse = await fetch('/api/v1/loans/my-loans', { headers: { Authorization: `Bearer ${token}` } });
+        if (!loanResponse.ok) throw new Error('Chưa tải được phiếu mượn. Vui lòng tải lại trang.');
+        const loans = await loanResponse.json();
+        if (!Array.isArray(loans)) throw new Error('Dữ liệu phiếu mượn không hợp lệ.');
         showLoans(loans);
         if (loanPanel) fetch('/api/v1/fines/my-fines', { headers: { Authorization: `Bearer ${token}` } }).then(async response => {
           if (!response.ok) throw new Error('Chưa tải được danh sách khoản phạt.');

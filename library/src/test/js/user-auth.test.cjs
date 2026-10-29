@@ -5,17 +5,22 @@ const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../../main/resources/static/js/user.js'), 'utf8');
 class Element {
-  constructor() { this.children = []; this.events = {}; this.style = {}; this.classList = { add() {}, remove() {} }; this.textContent = ''; }
+  constructor() { this.children = []; this.events = {}; this.style = {}; this.classList = { add() {}, remove() {}, toggle() {} }; this.textContent = ''; }
+  setAttribute() {}
+  removeAttribute() {}
+  getAttribute(name) { return this[name]; }
   addEventListener(name, handler) { this.events[name] = handler; }
   replaceChildren(...children) { this.children = children; this.textContent = ''; }
   append(...children) { this.children.push(...children); }
 }
-function setup({ pathname = '/user/borrowed', token = 'test-token', status = 200, loans = [], loginResponse } = {}) {
+function setup({ pathname = '/user/borrowed', token = 'test-token', status = 200, loans = [], roles = [], loginResponse } = {}) {
   const storage = new Map(token ? [['libraryToken', token], ['libraryProfile', JSON.stringify({ fullName: 'Huy' })]] : []);
   const actions = new Element(), panel = new Element(), intro = new Element();
   const bookLogin = { hidden: false }, bookBorrow = { hidden: true };
   const message = new Element(), button = new Element(), form = new Element();
   form.querySelector = selector => selector === '#authMessage' ? message : selector.startsWith('button') ? button : null;
+  const nav = new Element();
+  nav.querySelector = selector => nav.children.find(link => selector === `a[href="${link.href}"]`);
   const window = { location: { pathname } };
   const calls = [];
   const links = ['/user', '/user/books', '/user/borrowed', '/user/history'].map(href => ({
@@ -29,7 +34,7 @@ function setup({ pathname = '/user/borrowed', token = 'test-token', status = 200
     document: {
       addEventListener: (_, fn) => fn(),
       getElementById: id => id === 'bookLoginLink' ? bookLogin : id === 'bookBorrowPanel' ? bookBorrow : pathname === '/user/login' && id === 'loginForm' ? form : null,
-      querySelector: selector => ({ '.user-actions': actions, 'main .empty-state': panel, '.page-intro p': intro })[selector],
+      querySelector: selector => ({ '.topbar nav': nav, '.user-actions': actions, 'main .empty-state': panel, '.page-intro p': intro })[selector],
       querySelectorAll: () => links,
       createElement: () => new Element()
     },
@@ -39,11 +44,11 @@ function setup({ pathname = '/user/borrowed', token = 'test-token', status = 200
     setTimeout: fn => fn(),
     fetch: async (url, options) => {
       calls.push({ url, options });
-      return { status, ok: status < 400, json: async () => url.endsWith('/login') ? loginResponse : url.endsWith('/my-fines') ? [] : loans };
+      return { status, ok: status < 400, json: async () => url.endsWith('/login') ? loginResponse : url.endsWith('/my-fines') ? [] : url.endsWith('/profile') ? { fullName: 'Huy', roles } : loans };
     }
   };
   vm.runInNewContext(source, context);
-  return { storage, actions, panel, window, calls, form, message, links, bookLogin, bookBorrow };
+  return { storage, actions, panel, window, calls, form, message, links, bookLogin, bookBorrow, nav };
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
 test('login stores token/profile and opens the account', async () => {
@@ -127,4 +132,20 @@ test('guest and expired sessions do not show borrowing controls', async () => {
     assert.equal(app.bookLogin.hidden, false);
     assert.equal(app.bookBorrow.hidden, true);
   }
+});
+
+ test('server profile restores missing admin role on home and profile navigation', async () => {
+  for (const pathname of ['/user/profile', '/user', '/user/books']) {
+    const app = setup({ pathname, roles: ['ROLE_ADMIN'] });
+    await flush();
+    assert.equal(app.calls[0].url, '/api/v1/profile');
+    assert.deepEqual(JSON.parse(app.storage.get('libraryProfile')).roles, ['ROLE_ADMIN']);
+    assert.equal(app.nav.children.filter(link => link.href === '/admin').length, 1);
+    assert.equal(app.calls.some(call => call.url.endsWith('/my-loans')), false);
+  }
+});
+test('reader does not receive an admin navigation link', async () => {
+  const app = setup({ pathname: '/user', roles: ['ROLE_USER'] });
+  await flush();
+  assert.equal(app.nav.children.some(link => link.href === '/admin'), false);
 });
