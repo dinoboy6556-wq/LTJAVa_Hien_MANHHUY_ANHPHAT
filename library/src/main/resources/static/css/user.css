@@ -35,3 +35,15 @@
 h1,h2,h3,h4,.hero h1,.hero h1 em,.page-intro h1,.auth-card h1,.section-head h2,.empty-state h3,.book-cover h3,.book-info h3,.detail-info h1,.note-band h3,.favorite-book-title,.reading-intro h1,.reading-section-head h2,.reading-list .reading-loan-title,.reading-list .reading-fines h3,.reading-book-info>a,.reading-book-info>strong{font-family:"Segoe UI",Arial,sans-serif;line-height:1.4;letter-spacing:normal}
 .reading-stat strong{font-family:"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums}
 .notice-board,.reservation-panel{margin:24px 0;padding:22px;border:1px solid #b7cbb6;border-radius:12px;background:#f4f7ef}.notice-board summary{cursor:pointer;font-weight:600}.notice-board a{display:block;padding:10px 0;border-bottom:1px solid #dce6d7}.reservation-row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:12px 0;border-bottom:1px solid #dce6d7}
+body{font-size:15px}
+.nav-link,.search-form input{font-size:15px}
+.btn{font-size:14px}
+.eyebrow,.small-note{font-size:12px}
+.category,.book-info>p,.book-bottom,.result-line,.auth-form label,.auth-switch,.form-message{font-size:13px}
+.detail-info{font-size:17px}
+.detail-info .eyebrow{font-size:14px}
+.detail-info .detail-author{font-size:18px}
+.detail-info .book-description{font-size:17px;line-height:1.8}
+.detail-info dl{font-size:16px}
+.detail-info .availability-note{font-size:15px}
+.detail-info .btn{font-size:15px}
