@@ -10,6 +10,7 @@ import java.util.*;
 @Service
 @Transactional
 public class BookCopyService {
+    @org.springframework.beans.factory.annotation.Autowired private CopyEventRepository events;
     private final BookRepository books;
     private final BookCopyRepository copies;
     private final LoanItemRepository loanItems;
@@ -58,8 +59,10 @@ public class BookCopyService {
     }
 
     private BookCopy create(Book book, long sequence, BookCopyStatus status) {
-        return copies.save(BookCopy.builder().book(book).code("B" + book.getId() + "-" + String.format("%05d", sequence))
+        BookCopy created = copies.save(BookCopy.builder().book(book).code("B" + book.getId() + "-" + String.format("%05d", sequence))
                 .status(status).build());
+        record(created, null, "Nhập quyển");
+        return created;
     }
 
     public List<BookCopy> take(Long bookId, int quantity, BookCopyStatus status) {
@@ -69,7 +72,7 @@ public class BookCopyService {
         List<BookCopy> available = copies.findByBookIdAndStatusOrderByIdAsc(bookId, BookCopyStatus.AVAILABLE);
         if (available.size() < quantity) throw new IllegalStateException("Sách '" + book.getTitle() + "' không đủ bản sẵn có; hãy kiểm tra tồn kho/chuyển đổi dữ liệu.");
         List<BookCopy> selected = new ArrayList<>(available.subList(0, quantity));
-        selected.forEach(copy -> copy.setStatus(status));
+        selected.forEach(copy -> { var previous=copy.getStatus(); copy.setStatus(status); record(copy, previous, status == BookCopyStatus.BORROWED ? "Cho mượn" : "Bán sách"); });
         sync(book);
         return selected;
     }
@@ -79,11 +82,13 @@ public class BookCopyService {
         if (item.getCopy() == null) throw new IllegalStateException("Phiếu cũ chưa gắn mã quyển. Chạy chuyển đổi book copies trước khi trả.");
         BookCopy copy = copies.findById(item.getCopy().getId()).orElseThrow();
         if (copy.getStatus() != BookCopyStatus.BORROWED) throw new IllegalStateException("Quyển sách không ở trạng thái đang mượn: " + copy.getCode());
+        var previous = copy.getStatus();
         copy.setStatus(switch (condition) {
             case NORMAL -> BookCopyStatus.AVAILABLE;
             case DAMAGED -> BookCopyStatus.DAMAGED;
             case LOST -> BookCopyStatus.LOST;
         });
+        record(copy, previous, "Nhận trả");
         sync(book);
     }
 
@@ -119,8 +124,23 @@ public class BookCopyService {
         if (copy.getStatus() == BookCopyStatus.BORROWED || copy.getStatus() == BookCopyStatus.SOLD
                 || status == null || status == BookCopyStatus.BORROWED || status == BookCopyStatus.SOLD)
             throw new IllegalStateException("Trạng thái mượn/bán phải thay đổi qua nghiệp vụ tương ứng");
+        var previous = copy.getStatus();
         copy.setStatus(status);
+        if (previous != status) record(copy, previous, "Kiểm kê");
         sync(book);
         return copy;
     }
+    private void record(BookCopy copy, BookCopyStatus previous, String action) {
+        CopyEvent event=new CopyEvent();event.setCopyId(copy.getId());event.setAction(action);
+        event.setPreviousStatus(previous==null?null:previous.name());event.setNewStatus(copy.getStatus().name());
+        var auth=org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        event.setActor(auth==null?"system":auth.getName());event.setCreatedAt(java.time.LocalDateTime.now());events.save(event);
+    }
+    @Transactional(readOnly=true)
+    public List<CopyEvent> history(Long bookId, Long copyId) {
+        BookCopy copy=copies.findById(copyId).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy quyển"));
+        if(!copy.getBook().getId().equals(bookId))throw new IllegalArgumentException("Quyển không thuộc đầu sách");
+        return events.findByCopyIdOrderByIdDesc(copyId);
+    }
+
 }

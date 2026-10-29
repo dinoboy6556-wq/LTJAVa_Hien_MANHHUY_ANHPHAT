@@ -167,28 +167,77 @@ document.addEventListener('DOMContentLoaded', () => {
   function showLoans(loans) {
     if (!loanPanel) return;
     const history = window.location.pathname === '/user/history';
-    const visible = history ? loans : loans.filter(loan => loan.status !== 'RETURNED');
+    const visible = (history ? [...loans] : loans.filter(loan => loan.status !== 'RETURNED'))
+      .sort((a, b) => history ? Number(b.id) - Number(a.id) : String(a.dueDate || '').localeCompare(String(b.dueDate || '')));
+    const dateLabel = value => value ? String(value).split('-').reverse().join('/') : '—';
+    const localToday = new Date().toLocaleDateString('sv-SE');
+    const isOverdue = loan => loan.status === 'OVERDUE' || (loan.status === 'BORROWED' && loan.dueDate && loan.dueDate < localToday);
+    const summary = document.getElementById('loanSummary');
+    if (summary) {
+      summary.hidden = false; summary.replaceChildren();
+      const active = loans.filter(l => l.status !== 'RETURNED');
+      const stats = history
+        ? [['Tổng phiếu mượn', loans.length], ['Đã hoàn trả', loans.filter(l => l.status === 'RETURNED').length], ['Đang mượn', active.length]]
+        : [['Quyển đang mượn', active.reduce((sum,l) => sum + (l.items || []).filter(i => !i.returnedAt).reduce((n,i) => n + Number(i.quantity || 1),0),0)], ['Phiếu đang mượn', active.length], ['Phiếu quá hạn', active.filter(isOverdue).length]];
+      for (const [label,value] of stats) {
+        const stat = document.createElement('div'); stat.className = 'reading-stat';
+        const number = document.createElement('strong'); number.textContent = value;
+        const caption = document.createElement('span'); caption.textContent = label;
+        stat.append(number, caption); summary.append(stat);
+      }
+    }
     const intro = document.querySelector('.page-intro p');
     if (intro) intro.textContent = history
-      ? 'Các phiếu mượn và trả sách của tài khoản bạn.'
-      : 'Các phiếu mượn chưa trả và hạn trả của bạn.';
+      ? 'Mỗi cuốn sách là một chặng đường. Xem lại các phiếu mượn và ngày hoàn trả của bạn.'
+      : 'Theo dõi hạn trả và gia hạn để tiếp tục hành trình đọc của bạn.';
     loanPanel.replaceChildren();
+    loanPanel.classList.add('reading-loaded');
     const heading = document.createElement('h3');
     heading.textContent = visible.length ? `${visible.length} phiếu mượn`
       : (history ? 'Bạn chưa có lịch sử mượn sách.' : 'Bạn không có sách đang mượn.');
+    heading.className = 'reading-result';
     loanPanel.append(heading);
+    if (!visible.length) {
+      const explore = document.createElement('a'); explore.href = '/user/books'; explore.className = 'btn'; explore.textContent = 'Tìm cuốn sách tiếp theo →'; loanPanel.append(explore);
+    }
     const statuses = { BORROWED: 'Đang mượn', RETURNED: 'Đã trả', OVERDUE: 'Quá hạn' };
     for (const loan of visible) {
       const card = document.createElement('article');
+      card.className = 'reading-loan';
       const title = document.createElement('h3');
-      const overdue = loan.status === 'BORROWED' && loan.dueDate && loan.dueDate < new Date().toLocaleDateString('sv-SE');
+      const overdue = isOverdue(loan);
+      title.className = 'reading-loan-title';
+      card.classList.add(overdue ? 'loan-overdue' : loan.status === 'RETURNED' ? 'loan-returned' : 'loan-active');
       title.textContent = `Phiếu #${loan.id} — ${overdue ? statuses.OVERDUE : (statuses[loan.status] || loan.status)}`;
       const dates = document.createElement('p');
-      dates.textContent = `Ngày mượn: ${loan.borrowDate || '—'} · Hạn trả: ${loan.dueDate || '—'}${loan.returnDate ? ' · Ngày trả: ' + loan.returnDate : ''}`;
-      const books = document.createElement('ul');
-      for (const item of loan.items || []) {
+      dates.className = 'reading-dates';
+      function updateDates(data) {
+        dates.replaceChildren();
+        const values = [['Ngày mượn', data.borrowDate], ['Hạn trả', data.dueDate]];
+        if (data.returnDate) values.push(['Ngày trả', data.returnDate]);
+        for (const [label, value] of values) {
+          const block = document.createElement('span'); const caption = document.createElement('small'); caption.textContent = label;
+          const number = document.createElement('strong'); number.textContent = dateLabel(value); block.append(caption, number); dates.append(block);
+        }
+      }
+      updateDates(loan);
+      const books = document.createElement('ul'); books.className = 'reading-books';
+      for (const item of (loan.items || []).filter(item => history || !item.returnedAt)) {
         const row = document.createElement('li');
-        row.textContent = `${item.book?.title || 'Sách'}${item.copy?.code ? ' · Mã quyển: ' + item.copy.code : ''} — Số lượng: ${item.quantity}`;
+        row.className = 'reading-book';
+        const cover = document.createElement('div'); cover.className = 'reading-cover';
+        const monogram = document.createElement('span'); monogram.textContent = (item.book?.title || 'S').slice(0,1); cover.append(monogram);
+        if (item.book?.coverImageUrl && /^(https?:\/\/|\/(?!\/))/.test(item.book.coverImageUrl)) {
+          const image = document.createElement('img'); image.src = item.book.coverImageUrl; image.alt = `Bìa ${item.book.title}`; image.loading = 'lazy';
+          image.addEventListener('error', () => { image.hidden = true; }); cover.append(image);
+        }
+        const info = document.createElement('div'); info.className = 'reading-book-info';
+        const bookTitle = document.createElement(item.book?.id ? 'a' : 'strong'); bookTitle.textContent = item.book?.title || 'Sách';
+        if (item.book?.id) bookTitle.href = `/user/books/${item.book.id}`;
+        const author = document.createElement('span'); author.textContent = item.book?.author?.name || 'Tác giả đang cập nhật';
+        const detail = document.createElement('small'); detail.textContent = `${item.copy?.code ? 'Mã quyển: ' + item.copy.code + ' · ' : ''}Số lượng: ${item.quantity || 1}`;
+        if (item.returnedAt) detail.textContent += ` · Đã trả ${dateLabel(item.returnedAt)}`;
+        info.append(bookTitle, author, detail); row.append(cover, info);
         books.append(row);
       }
       card.append(title, dates, books);
@@ -212,12 +261,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`/api/v1/loans/${loan.id}/renew`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ days }) });
             const result = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(result.message || 'Không thể gia hạn phiếu mượn.');
-            dates.textContent = `Ngày mượn: ${result.borrowDate || '—'} · Hạn trả mới: ${result.dueDate || '—'}`;
+            updateDates({ ...loan, ...result });
+            feedback.textContent = 'Gia hạn thành công. Hạn trả mới đã được cập nhật.';
+            feedback.classList.add('success');
             renew.textContent = 'Đã gia hạn';
-          } catch (error) { dates.textContent += ` · ${error.message}`; renew.disabled = false; duration.disabled = false; }
+          } catch (error) { feedback.textContent = error.message; feedback.classList.remove('success'); renew.disabled = false; duration.disabled = false; }
         });
         renewal.append(label, renew); card.append(renewal);
       }
+      const footer = document.createElement('div'); footer.className = 'reading-loan-footer';
+      const fee = document.createElement('span'); fee.textContent = `Phí mượn: ${Number(loan.rentalFee || 0).toLocaleString('vi-VN')} đ`;
+      const note = document.createElement('span'); note.textContent = loan.status === 'RETURNED' ? 'Cảm ơn bạn đã hoàn trả sách' : overdue ? 'Vui lòng liên hệ thư viện để trả sách' : Number(loan.renewalCount || 0) >= 1 ? 'Đã sử dụng lượt gia hạn' : 'Mỗi phiếu được gia hạn một lần';
+      footer.append(fee, note); card.append(footer);
+      const feedback = document.createElement('p'); feedback.className = 'form-message reading-feedback'; feedback.setAttribute('role','status'); feedback.setAttribute('aria-live','polite'); card.append(feedback);
       loanPanel.append(card);
     }
   }
@@ -246,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!response.ok) throw new Error('Chưa tải được danh sách khoản phạt.');
           const fines = await response.json();
           if (!fines.length) return;
-          const section = document.createElement('section'); section.className = 'fine-list';
+          const section = document.createElement('section'); section.className = 'fine-list reading-fines';
           const heading = document.createElement('h3'); heading.textContent = 'Khoản phạt'; section.append(heading);
           for (const fine of fines) {
             const row = document.createElement('p');
@@ -254,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
             section.append(row);
           }
           loanPanel.append(section);
-        }).catch(() => {});
+        }).catch(() => { const notice = document.createElement('p'); notice.className = 'form-message'; notice.textContent = 'Chưa tải được khoản phạt. Vui lòng tải lại trang để kiểm tra.'; loanPanel.append(notice); });
       })
       .catch(error => {
         if (loanPanel) loanPanel.textContent = error.message || 'Không thể kết nối máy chủ.';

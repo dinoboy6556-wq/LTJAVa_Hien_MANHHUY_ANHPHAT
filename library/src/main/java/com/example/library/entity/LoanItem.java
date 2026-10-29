@@ -31,4 +31,8 @@ public class LoanItem {
 
     @Column(name = "rental_price", nullable = false)
     private BigDecimal rentalPrice;
+
+    private java.time.LocalDate returnedAt;
+    @Enumerated(EnumType.STRING)
+    private BookReturnCondition returnCondition;
 }

@@ -17,6 +17,9 @@ public class BookCopyController {
     public record ChangeStatus(@NotNull BookCopyStatus status) {}
     @GetMapping
     public List<BookCopy> list(@PathVariable Long bookId) { return copies.list(bookId); }
+    @GetMapping("/{copyId}/history")
+    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
+    public List<CopyEvent> history(@PathVariable Long bookId, @PathVariable Long copyId) { return copies.history(bookId, copyId); }
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     public List<BookCopy> add(@PathVariable Long bookId, @Valid @RequestBody AddCopies request) {

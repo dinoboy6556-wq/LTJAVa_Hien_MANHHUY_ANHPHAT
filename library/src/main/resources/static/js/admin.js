@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const labels = {AVAILABLE:'Còn sách',OUT_OF_STOCK:'Hết sách',BORROWED:'Đang mượn',RETURNED:'Đã trả',OVERDUE:'Quá hạn',DAMAGED:'Hỏng',LOST:'Mất',SOLD:'Đã bán',UNAVAILABLE:'Chưa sẵn sàng',paid:'Đã thanh toán',unpaid:'Chưa thanh toán',enabled:'Hoạt động',disabled:'Đã khóa'};
   const titles = {overview:'Tổng quan',books:'Sách & tồn kho',loans:'Phiếu mượn',fines:'Khoản phạt',sales:'Hóa đơn',users:'Tài khoản',reports:'Báo cáo'};
   const endpoints = {books:'/api/v1/books',loans:'/api/v1/loans',fines:'/api/v1/fines',sales:'/api/v1/sales',users:'/api/v1/admin/users'};
-  const columns = {books:['Sách / tác giả','Thể loại','Còn / tổng','Phí mượn / giá bán','Thao tác'],loans:['Phiếu / độc giả','Sách / mã quyển','Ngày mượn / hạn trả','Trạng thái','Thao tác'],fines:['Mã / độc giả','Phiếu','Lý do','Số tiền','Trạng thái / thao tác'],sales:['Hóa đơn','Người mua','Ngày tạo','Sách','Tổng tiền'],users:['Tài khoản','Liên hệ','Quyền','Trạng thái','Thao tác']};
+  const columns = {books:['Sách','Tác giả','Thể loại','Còn trong kho','Tổng quyển','Phí mượn','Giá bán','Thao tác'],loans:['Mã phiếu','Độc giả','Email','Sách','Số quyển','Mã quyển','Ngày mượn','Hạn trả','Trạng thái','Thao tác'],fines:['Mã phạt','Email độc giả','Phiếu','Lý do','Số tiền','Trạng thái','Thao tác'],sales:['Hóa đơn','Người mua','Ngày tạo','Sách','Tổng tiền'],users:['Họ tên','Email','Điện thoại','Địa chỉ','Quyền','Trạng thái','Thao tác']};
   let section = 'overview', rows = [], page = 0, isAdmin = false, generation = 0;
   const pageSize = 10;
   function logout() { localStorage.removeItem('libraryToken'); localStorage.removeItem('libraryProfile'); location.href='/user/login'; }
@@ -30,35 +30,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     const body=openDialog(`Từng quyển — ${book.title}`);body.textContent='Đang tải...';
     const copies=await request(`/api/v1/books/${book.id}/copies`);body.replaceChildren();
     const form=el('form',null,'admin-form');const quantity=field(form,'Số quyển nhập thêm','number',1);quantity.min=1;quantity.max=1000;quantity.required=true;
-    submitForm(form,'Nhập thêm quyển',async()=>{if(!confirm(`Nhập thêm ${quantity.value} quyển ${book.title}?`))return;await request(`/api/v1/books/${book.id}/copies`,{method:'POST',body:JSON.stringify({quantity:Number(quantity.value)})});await saved('Đã nhập thêm quyển sách.');});body.append(form);
+    submitForm(form,'Nhập thêm quyển',async()=>{if(!confirm(`Nhập thêm ${quantity.value} quyển ${book.title}?`))return;await request(`/api/v1/books/${book.id}/copies`,{method:'POST',body:JSON.stringify({quantity:Number(quantity.value)})});await load();await inventory(book);$('dialogMessage').textContent='Đã nhập thêm quyển sách.';});body.append(form);
     if(!copies.length)body.append(el('p','Chưa có mã quyển. Kiểm tra dữ liệu tồn kho trước khi nhập thêm.'));
     for(const copy of copies){const row=el('div',null,'copy-row');row.append(el('strong',copy.code));
       if(['BORROWED','SOLD'].includes(copy.status)) {
         row.append(el('span',labels[copy.status],'admin-badge'));
         if(copy.status==='BORROWED') row.append(action('Mở phiếu để nhận trả / báo hỏng, mất',async()=>{
           const loans=await request('/api/v1/loans');
-          const matches=loans.filter(loan=>loan.status!=='RETURNED'&&(loan.items||[]).some(item=>item.copy?.id===copy.id));
+          const matches=loans.filter(loan=>loan.status!=='RETURNED'&&(loan.items||[]).some(item=>!item.returnedAt&&item.copy?.id===copy.id));
           if(matches.length!==1)throw new Error('Không xác định được một phiếu mượn đang hoạt động cho mã '+copy.code+'. Cần kiểm tra dữ liệu trước khi đổi trạng thái.');
-          returnLoan(matches[0]);
+          returnLoan(matches[0],copy.id,book);
         }));
       }
       else{const select=selectField(row,'Tình trạng',['AVAILABLE','DAMAGED','LOST','UNAVAILABLE'].map(s=>[s,labels[s]]),copy.status);
-        row.append(action('Lưu kiểm kê',async()=>{if(!confirm(`Đổi ${copy.code} thành ${labels[select.value]}?`))return;await request(`/api/v1/books/${book.id}/copies/${copy.id}`,{method:'PATCH',body:JSON.stringify({status:select.value})});await saved('Đã cập nhật tình trạng quyển sách.');}));}
+        row.append(action('Lưu kiểm kê',async()=>{if(!confirm(`Đổi ${copy.code} thành ${labels[select.value]}?`))return;await request(`/api/v1/books/${book.id}/copies/${copy.id}`,{method:'PATCH',body:JSON.stringify({status:select.value})});copy.status=select.value;await load();$('dialogMessage').textContent=`Đã lưu ${copy.code}: ${labels[copy.status]}.`;}));}
+      row.append(action('Lịch sử quyển',async()=>{
+        let history=row.querySelector('.copy-history');
+        if(history){history.remove();return;}
+        const events=await request(`/api/v1/books/${book.id}/copies/${copy.id}/history`);
+        history=el('div',null,'copy-history');
+        if(!events.length)history.append(el('p','Chưa có lịch sử ghi nhận. Nhật ký chỉ có từ khi bật chức năng này.'));
+        for(const event of events)history.append(el('p',`${event.createdAt.replace('T',' ').slice(0,19)} · ${event.action} · ${labels[event.previousStatus]||'—'} → ${labels[event.newStatus]||event.newStatus} · ${event.actor}`));
+        row.append(history);
+      }));
       body.append(row);
     }
   }
-  function returnLoan(loan){const body=openDialog(`Nhận trả phiếu #${loan.id}`),form=el('form',null,'admin-form');body.append(el('p','Tình trạng chọn dưới đây áp dụng cho tất cả quyển trong phiếu. Khoản phạt quá hạn/hỏng/mất được tính khi xác nhận.'));
-    body.append(el('p',`Độc giả: ${loan.user?.fullName||loan.user?.email||'—'}. Các quyển trong phiếu: ${(loan.items||[]).map(item=>`${item.book?.title||'Sách'} (${item.copy?.code||'Chưa có mã'})`).join('; ')}`));
+  function returnLoan(loan,copyId=null,originBook=null){
+    const body=openDialog(`Nhận trả phiếu #${loan.id}`),form=el('form',null,'admin-form');
+    body.append(el('p','Chọn các quyển được trả lần này. Nếu tình trạng khác nhau, xử lý từng nhóm riêng. Phiếu chỉ hoàn tất khi tất cả quyển đã trả.'));
+    body.append(el('p',`Độc giả: ${loan.user?.fullName||loan.user?.email||'—'}`));
+    const picks=[];
+    for(const item of loan.items||[]){
+      if(item.returnedAt)continue;
+      const label=el('label',`${item.book?.title||'Sách'} · ${item.copy?.code||'Chưa có mã'}`,'wide');
+      const input=el('input');input.type='checkbox';input.checked=copyId==null||item.copy?.id===copyId;
+      picks.push({input,id:item.id});label.append(input);form.append(label);
+    }
     const condition=selectField(form,'Tình trạng khi trả',[['NORMAL','Bình thường'],['DAMAGED','Hỏng'],['LOST','Mất']],'NORMAL'),note=field(form,'Ghi chú');
-    submitForm(form,'Xác nhận nhận trả',async()=>{if(!confirm(`Xác nhận nhận trả toàn bộ phiếu #${loan.id}?`))return;const result=await request(`/api/v1/loans/${loan.id}/return`,{method:'POST',body:JSON.stringify({condition:condition.value,note:note.value})});await saved(`Đã nhận trả phiếu #${loan.id}. Tiền phạt: ${money(result.fineAmount)}.`);});body.append(form);
+    submitForm(form,'Xác nhận nhận trả',async()=>{
+      const itemIds=picks.filter(p=>p.input.checked).map(p=>p.id);
+      if(!itemIds.length)throw new Error('Chọn ít nhất một quyển để trả.');
+      if(!confirm(`Nhận trả ${itemIds.length} quyển đã chọn của phiếu #${loan.id}?`))return;
+      const result=await request(`/api/v1/loans/${loan.id}/return`,{method:'POST',body:JSON.stringify({condition:condition.value,note:note.value,itemIds})});
+      const message=`Đã nhận trả ${itemIds.length} quyển. Tổng phạt của phiếu: ${money(result.fineAmount)}.`;
+      if(originBook){await load();await inventory(originBook);$('dialogMessage').textContent=message;}
+      else await saved(message);
+    });body.append(form);
   }
   function editUser(user){const body=openDialog(`Tài khoản — ${user.email}`),form=el('form',null,'admin-form');
     const enabled=selectField(form,'Trạng thái',[['true','Hoạt động'],['false','Khóa']],String(user.enabled));
     const checks=['ROLE_ADMIN','ROLE_LIBRARIAN','ROLE_USER'].map(role=>{const label=el('label',role.replace('ROLE_',''));const input=el('input');input.type='checkbox';input.checked=user.roles.includes(role);input.value=role;label.append(input);form.append(label);return input;});
     submitForm(form,'Lưu tài khoản',async()=>{const roles=checks.filter(i=>i.checked).map(i=>i.value);if(!roles.length)throw new Error('Chọn ít nhất một vai trò.');if(!confirm(`Cập nhật quyền và trạng thái của ${user.email}?`))return;await request(`/api/v1/admin/users/${user.id}`,{method:'PUT',body:JSON.stringify({enabled:enabled.value==='true',roles})});await saved('Đã cập nhật tài khoản.');});body.append(form);
   }
-  $('newBook').addEventListener('click',async()=>{
-    const body=openDialog('Thêm đầu sách');body.textContent='Đang tải danh mục...';
+  async function bookForm(existing=null){
+    const body=openDialog(existing?'Sửa đầu sách':'Thêm đầu sách');body.textContent='Đang tải danh mục...';
     try{const [categories,authors,publishers]=await Promise.all(['/categories','/authors','/publishers'].map(path=>request('/api/v1'+path)));body.replaceChildren();
       const form=el('form',null,'admin-form');const title=field(form,'Tên sách');title.required=true;const isbn=field(form,'ISBN');
       const cover=field(form,'Đường dẫn ảnh bìa (https://...)','url');const description=field(form,'Mô tả');
@@ -67,9 +93,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       const publisher=selectField(form,'Nhà xuất bản',[['','Chưa chọn'],...publishers.map(x=>[String(x.id),x.name])],'');
       const quantity=field(form,'Số lượng','number',1);quantity.min=1;quantity.required=true;
       const rental=field(form,'Phí mượn / quyển','number',0),price=field(form,'Giá bán','number',0);for(const input of [rental,price]){input.min=0;input.required=true;}
-      submitForm(form,'Tạo đầu sách',async()=>{await request('/api/v1/books',{method:'POST',body:JSON.stringify({title:title.value,isbn:isbn.value,coverImageUrl:cover.value,description:description.value,categoryId:category.value?Number(category.value):null,authorId:author.value?Number(author.value):null,publisherId:publisher.value?Number(publisher.value):null,totalQuantity:Number(quantity.value),rentalPrice:Number(rental.value),salePrice:Number(price.value)})});await saved('Đã tạo đầu sách và mã từng quyển.');});body.append(form);
+      if(existing){title.value=existing.title||'';isbn.value=existing.isbn||'';cover.value=existing.coverImageUrl||'';description.value=existing.description||'';
+        category.value=String(existing.category?.id||'');author.value=String(existing.author?.id||'');publisher.value=String(existing.publisher?.id||'');
+        quantity.value=existing.totalQuantity;quantity.disabled=true;rental.value=existing.rentalPrice;price.value=existing.salePrice;}
+      submitForm(form,existing?'Lưu thay đổi':'Tạo đầu sách',async()=>{await request(existing?`/api/v1/books/${existing.id}`:'/api/v1/books',{method:existing?'PUT':'POST',body:JSON.stringify({title:title.value,isbn:isbn.value,coverImageUrl:cover.value,description:description.value,categoryId:category.value?Number(category.value):null,authorId:author.value?Number(author.value):null,publisherId:publisher.value?Number(publisher.value):null,totalQuantity:Number(quantity.value),rentalPrice:Number(rental.value),salePrice:Number(price.value)})});await saved(existing?'Đã cập nhật thông tin đầu sách.':'Đã tạo đầu sách và mã từng quyển.');});body.append(form);
     }catch(error){$('dialogMessage').textContent=error.message;body.replaceChildren();}
-  });
+  }
+  $('newBook').addEventListener('click',()=>bookForm());
   function status(row){if(section==='books')return row.availableQuantity>0?'AVAILABLE':'OUT_OF_STOCK';if(section==='loans')return loanStatus(row);if(section==='fines')return row.paid?'paid':'unpaid';if(section==='users')return row.enabled?'enabled':'disabled';return '';}
   function render(){
     const query=$('adminSearch').value.trim().toLocaleLowerCase('vi'),filter=$('adminFilter').value;
@@ -78,12 +108,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     const head=el('tr');columns[section].forEach(text=>head.append(el('th',text)));$('adminHead').replaceChildren(head);$('adminRows').replaceChildren();
     for(const row of filtered.slice(page*pageSize,(page+1)*pageSize)){
       const tr=el('tr');const cells=[];let controls=el('div');
-      if(section==='books'){cells.push(`${row.title} — ${row.author?.name||'Chưa có tác giả'}`,row.category?.name||'—',`${row.availableQuantity} / ${row.totalQuantity}`,`${money(row.rentalPrice)} / ${money(row.salePrice)}`);controls.append(action('Từng quyển / nhập sách',()=>inventory(row)));}
-      if(section==='loans'){cells.push(`#${row.id} · ${row.user?.fullName||''} · ${row.user?.email||''}`,(row.items||[]).map(i=>`${i.book?.title||''} (${i.copy?.code||'Chưa có mã'})`).join('; '),`${row.borrowDate} / ${row.dueDate}`,labels[loanStatus(row)]||row.status);if(row.status!=='RETURNED')controls.append(action('Nhận trả',()=>returnLoan(row)));else controls.append(el('span',`Đã trả ${row.returnDate||''}`));}
-      if(section==='fines'){cells.push(`#${row.id} · ${row.loan?.user?.email||''}`,`#${row.loan?.id||'—'}`,row.reason||'—',money(row.amount));controls.append(el('span',labels[status(row)],'admin-badge'));if(!row.paid)controls.append(action('Xác nhận đã thu',async()=>{if(!confirm(`Đã nhận ${money(row.amount)} cho khoản phạt #${row.id}?`))return;await request(`/api/v1/fines/${row.id}/mark-paid`,{method:'POST'});await load();$('adminMessage').textContent='Đã xác nhận thanh toán khoản phạt.';}));}
+      if(section==='books'){cells.push(row.title,row.author?.name||'Chưa có tác giả',row.category?.name||'—',row.availableQuantity,row.totalQuantity,money(row.rentalPrice),money(row.salePrice));controls.append(action('Từng quyển / nhập sách',()=>inventory(row)),action('Sửa đầu sách',()=>bookForm(row)));}
+      if(section==='loans'){
+        const groups=new Map();
+        for(const item of row.items||[]){
+          const key=item.book?.id ?? item.book?.title ?? 'unknown';
+          if(!groups.has(key))groups.set(key,{title:item.book?.title||'Sách',codes:[],quantity:0});
+          const group=groups.get(key);group.codes.push((item.copy?.code||'Chưa có mã')+(item.returnedAt?' (đã trả)':''));group.quantity+=Number(item.quantity||1);
+        }
+        const grouped=[...groups.values()];
+        const titles=grouped.map((g,i)=>`${grouped.length>1?`${i+1}. `:''}${g.title}`);
+        const codes=grouped.map((g,i)=>`${grouped.length>1?`${i+1}. `:''}${g.codes.join(', ')}`);
+        cells.push(`#${row.id}`, row.user?.fullName||'—', row.user?.email||'—', titles, grouped.map(g=>String(g.quantity)), codes, row.borrowDate||'—',row.dueDate||'—',labels[loanStatus(row)]||row.status);if(row.status!=='RETURNED')controls.append(action('Nhận trả',()=>returnLoan(row)));else controls.append(el('span',`Đã trả ${row.returnDate||''}`));}
+      if(section==='fines'){cells.push(`#${row.id}`,row.loan?.user?.email||'—',`#${row.loan?.id||'—'}`,row.reason||'—',money(row.amount),labels[status(row)]);if(!row.paid)controls.append(action('Xác nhận đã thu',async()=>{if(!confirm(`Đã nhận ${money(row.amount)} cho khoản phạt #${row.id}?`))return;await request(`/api/v1/fines/${row.id}/mark-paid`,{method:'POST'});await load();$('adminMessage').textContent='Đã xác nhận thanh toán khoản phạt.';}));}
       if(section==='sales'){cells.push(`#${row.id}`,row.user?.email||'—',row.createdAt?.replace('T',' ').slice(0,19)||'—',(row.items||[]).map(i=>`${i.book?.title||''} × ${i.quantity}`).join('; '),money(row.totalAmount));controls=null;}
-      if(section==='users'){cells.push(`${row.fullName} · ${row.email}`,`${row.phone||'—'} · ${row.address||'—'}`,row.roles.map(r=>r.replace('ROLE_','')).join(', '),labels[status(row)]);controls.append(action('Chỉnh sửa',()=>editUser(row)));}
-      cells.forEach(value=>tr.append(el('td',value)));if(controls){const td=el('td');td.append(controls);tr.append(td);}$('adminRows').append(tr);
+      if(section==='users'){cells.push(row.fullName,row.email,row.phone||'—',row.address||'—',row.roles.map(r=>r.replace('ROLE_','')).join(', '),labels[status(row)]);controls.append(action('Chỉnh sửa',()=>editUser(row)));}
+      cells.forEach((value,index)=>{const td=el('td');if(Array.isArray(value)){value.forEach(text=>td.append(el('div',text,'admin-cell-line')));}else td.textContent=value;if(section==='loans')td.className=`loan-column-${index}`;tr.append(td);});if(controls){const td=el('td');td.append(controls);tr.append(td);}$('adminRows').append(tr);
     }
     if(!filtered.length){const tr=el('tr'),td=el('td','Không có dữ liệu phù hợp.');td.colSpan=columns[section].length;tr.append(td);$('adminRows').append(tr);}
     $('adminPage').textContent=`Trang ${page+1}/${pages} · ${filtered.length} kết quả`;$('adminPrevious').disabled=page===0;$('adminNext').disabled=page>=pages-1;

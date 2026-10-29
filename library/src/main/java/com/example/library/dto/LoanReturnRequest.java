@@ -10,4 +10,5 @@ public class LoanReturnRequest {
     private BookReturnCondition condition = BookReturnCondition.NORMAL;
 
     private String note;
+    private java.util.List<Long> itemIds;
 }
