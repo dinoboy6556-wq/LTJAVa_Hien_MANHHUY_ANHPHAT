@@ -50,7 +50,11 @@ public class LoanService {
 
     @Transactional
     public Loan createLoan(LoanCreateRequest request) {
-        String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        return createForUser(request, SecurityContextHolder.getContext().getAuthentication().getName());
+    }
+
+    @Transactional
+    public Loan createForUser(LoanCreateRequest request, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user"));
 
@@ -153,6 +157,16 @@ public class LoanService {
             loan.setStatus(LoanStatus.RETURNED);
         }
         return loanRepository.save(loan);
+    }
+
+    @Transactional
+    public Loan returnMyLoan(Long loanId, LoanReturnRequest request) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Loan loan = loanRepository.findForUpdate(loanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mượn"));
+        if (loan.getUser() == null || !email.equals(loan.getUser().getEmail()))
+            throw new org.springframework.security.access.AccessDeniedException("Bạn chỉ có thể trả sách của chính mình");
+        return returnLoan(loanId, request);
     }
 
     @Transactional

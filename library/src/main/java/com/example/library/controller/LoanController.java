@@ -41,6 +41,12 @@ public class LoanController {
         return ResponseEntity.ok(loanService.returnLoan(id, request));
     }
 
+    @PostMapping("/{id}/my-return")
+    public ResponseEntity<Loan> returnMyLoan(@PathVariable Long id,
+            @RequestBody(required = false) LoanReturnRequest request) {
+        return ResponseEntity.ok(loanService.returnMyLoan(id, request));
+    }
+
     public record RenewalRequest(@jakarta.validation.constraints.NotNull
             @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(7) Integer days) {}
 

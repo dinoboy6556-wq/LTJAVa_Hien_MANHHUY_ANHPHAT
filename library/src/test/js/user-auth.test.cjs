@@ -166,3 +166,23 @@ test('renewal sends the selected number of days', async () => {
  const request=app.calls.find(c=>c.url.endsWith('/12/renew'));
  assert.equal(JSON.parse(request.options.body).days,3);
 });
+
+test('history has no return or renewal controls even for active loans',async()=>{
+ const app=setup({pathname:'/user/history',loans:[{id:5,status:'BORROWED',dueDate:'2099-01-01',items:[{id:8,quantity:1,book:{title:'Java'}}]}]});await flush();
+ const texts=[];function walk(node){texts.push(node.textContent);for(const child of node.children||[])walk(child);}walk(app.panel);
+ assert.equal(texts.some(text=>text==='Gia hạn'||text==='Trả quyển này'||text?.startsWith('Trả tất cả')),false);
+});
+test('borrowed page offers individual and all returns for outstanding copies only',async()=>{
+ const app=setup({loans:[{id:5,status:'BORROWED',items:[{id:8,quantity:1,book:{title:'Java'}},{id:9,quantity:1,returnedAt:'2026-01-01',book:{title:'Returned'}}]}]});await flush();
+ const texts=[];function walk(node){texts.push(node.textContent);for(const child of node.children||[])walk(child);}walk(app.panel);
+ assert.equal(texts.filter(text=>text==='Trả quyển này').length,1);assert.ok(texts.includes('Trả tất cả 1 quyển còn lại'));assert.equal(texts.includes('Returned'),false);
+});
+
+test('history excludes active and partially returned loans',async()=>{
+ const app=setup({pathname:'/user/history',loans:[{id:1,status:'BORROWED',items:[{returnedAt:'2026-10-01'}]},{id:2,status:'OVERDUE',items:[]},{id:3,status:'RETURNED',items:[]}]});await flush();
+ assert.equal(app.panel.children.length,2);assert.match(app.panel.children[1].children[0].textContent,/Phiếu #3/);
+});
+
+test('librarian retains management link across home and profile navigation',async()=>{
+ for(const pathname of ['/user','/user/profile','/user/books']){const app=setup({pathname,roles:['ROLE_LIBRARIAN']});await flush();assert.equal(app.nav.children.filter(link=>link.href==='/admin').length,1);}
+});

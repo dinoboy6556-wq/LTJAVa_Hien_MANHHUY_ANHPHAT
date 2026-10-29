@@ -9,3 +9,6 @@
 .loan-column-0,.loan-column-4,.loan-column-6,.loan-column-7{white-space:nowrap}.loan-column-0{font-weight:700}.loan-column-1{min-width:140px}.loan-column-2{min-width:190px;overflow-wrap:anywhere}.loan-column-3{min-width:250px;max-width:360px}.loan-column-5{min-width:150px;max-width:230px;overflow-wrap:anywhere}.loan-column-8{min-width:90px}
 
 .copy-row{flex-wrap:wrap}.copy-history{flex-basis:100%;background:#f3f6ef;padding:12px;border-radius:6px;font-size:12px}.copy-history p{margin:8px 0}.admin-form input[type=checkbox]{justify-self:start;width:18px;height:18px}
+
+/* Keep each physical copy code on its own readable line. */
+.loan-column-5 .admin-cell-line{display:block;white-space:nowrap;overflow-wrap:normal}

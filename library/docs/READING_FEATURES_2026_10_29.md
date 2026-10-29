@@ -25,3 +25,7 @@ GET /api/v1/books/{bookId}/copies/{copyId}/history: ADMIN/LIBRARIAN.
 ## Kiểm tra
 Backend `library/mvnw.cmd -B -f library/pom.xml test` từ gốc project (H2). Frontend `node --test library/src/test/js/*.test.cjs`.
 Trước khi triển khai dùng MySQL: chạy migration, kiểm tra một phiếu 2 quyển trả 1 rồi trả phần còn lại; kiểm tra khoản phạt, tồn kho, lịch sử và thông báo đúng tài khoản.
+
+## Độc giả tự trả sách
+Sách đang mượn chỉ hiện các quyển chưa trả, có nút Trả quyển này và Trả tất cả quyển còn lại. Có xác nhận trước thao tác. API POST /api/v1/loans/{id}/my-return kiểm tra đúng chủ phiếu, dùng cùng transaction và cách tính phạt như nghiệp vụ trả hiện có. Giao diện tự trả dùng tình trạng NORMAL; sách hỏng/mất liên hệ thủ thư. Đây là trả trực tiếp, chưa có bước chờ thủ thư duyệt. Không thêm bảng/cột.
+Lịch sử là trang chỉ đọc của toàn bộ phiếu đã từng tạo (gồm đang mượn và đã trả), hiển thị ngày trả từng quyển, không có nút trả/gia hạn.
