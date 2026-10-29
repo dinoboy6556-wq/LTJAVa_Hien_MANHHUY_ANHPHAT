@@ -398,4 +398,27 @@ class BookCopyIntegrationTest {
         mvc.perform(get("/api/v1/reservations")).andExpect(jsonPath("$.length()").value(0));
     }
 
+    @Test @WithMockUser(username="copies@example.com")
+    void readerReturnsOwnCopiesPartiallyThenAll() throws Exception {
+        user();Book book=book(2,2);inventory.initialize(book.getId());
+        Loan loan=loanService.createLoan(request(book.getId(),2));
+        Long first=loan.getItems().get(0).getId();
+        mvc.perform(post("/api/v1/loans/"+loan.getId()+"/my-return").contentType("application/json")
+          .content("{\"itemIds\":["+first+"],\"condition\":\"NORMAL\"}"))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("BORROWED"));
+        assertEquals(1,book.getAvailableQuantity());
+        mvc.perform(post("/api/v1/loans/"+loan.getId()+"/my-return"))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("RETURNED"));
+        assertEquals(2,book.getAvailableQuantity());
+    }
+    @Test @WithMockUser(username="copies@example.com")
+    void readerCannotReturnSomeoneElsesLoanThroughSelfService() throws Exception {
+        user();Book book=book(1,1);inventory.initialize(book.getId());
+        Loan loan=loanService.createLoan(request(book.getId(),1));
+        mvc.perform(post("/api/v1/loans/"+loan.getId()+"/my-return")
+          .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("another@example.com")))
+          .andExpect(status().isForbidden());
+        assertEquals(0,book.getAvailableQuantity());assertEquals(LoanStatus.BORROWED,loan.getStatus());
+    }
+
 }

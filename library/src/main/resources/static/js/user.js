@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateAdminLink(profile) {
     if (!mainNav) return;
     let link = mainNav.querySelector('a[href="/admin"]');
-    if (!Array.isArray(profile.roles) || !profile.roles.includes('ROLE_ADMIN')) {
+    if (!Array.isArray(profile.roles) || !profile.roles.some(role => ['ROLE_ADMIN', 'ROLE_LIBRARIAN'].includes(role))) {
       link?.remove();
       return;
     }
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function showLoans(loans) {
     if (!loanPanel) return;
     const history = window.location.pathname === '/user/history';
-    const visible = (history ? [...loans] : loans.filter(loan => loan.status !== 'RETURNED'))
+    const visible = (history ? loans.filter(loan => loan.status === 'RETURNED') : loans.filter(loan => loan.status !== 'RETURNED'))
       .sort((a, b) => history ? Number(b.id) - Number(a.id) : String(a.dueDate || '').localeCompare(String(b.dueDate || '')));
     const dateLabel = value => value ? String(value).split('-').reverse().join('/') : '—';
     const localToday = new Date().toLocaleDateString('sv-SE');
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
       summary.hidden = false; summary.replaceChildren();
       const active = loans.filter(l => l.status !== 'RETURNED');
       const stats = history
-        ? [['Tổng phiếu mượn', loans.length], ['Đã hoàn trả', loans.filter(l => l.status === 'RETURNED').length], ['Đang mượn', active.length]]
+        ? [['Phiếu đã trả', visible.length], ['Quyển đã trả', visible.reduce((n,l)=>n+(l.items||[]).reduce((m,i)=>m+Number(i.quantity||1),0),0)], ['Tổng phí mượn', visible.reduce((n,l)=>n+Number(l.rentalFee||0),0).toLocaleString('vi-VN')+' đ']]
         : [['Quyển đang mượn', active.reduce((sum,l) => sum + (l.items || []).filter(i => !i.returnedAt).reduce((n,i) => n + Number(i.quantity || 1),0),0)], ['Phiếu đang mượn', active.length], ['Phiếu quá hạn', active.filter(isOverdue).length]];
       for (const [label,value] of stats) {
         const stat = document.createElement('div'); stat.className = 'reading-stat';
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const intro = document.querySelector('.page-intro p');
     if (intro) intro.textContent = history
-      ? 'Mỗi cuốn sách là một chặng đường. Xem lại các phiếu mượn và ngày hoàn trả của bạn.'
+      ? 'Mỗi cuốn sách là một chặng đường. Xem lại các phiếu đã trả xong và ngày hoàn trả của bạn.'
       : 'Theo dõi hạn trả và gia hạn để tiếp tục hành trình đọc của bạn.';
     loanPanel.replaceChildren();
     loanPanel.classList.add('reading-loaded');
@@ -221,6 +221,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       updateDates(loan);
+      let returning = false;
+      const returnButtons = [];
+      async function returnBooks(itemIds) {
+        if (returning) return;
+        if (!window.confirm(`Xác nhận trả ${itemIds.length} quyển? Tồn kho sẽ được cập nhật và khoản phạt quá hạn (nếu có) sẽ được tính.`)) return;
+        returning = true; returnButtons.forEach(button => button.disabled = true);
+        feedback.textContent = 'Đang xử lý trả sách...';
+        try {
+          const response = await fetch(`/api/v1/loans/${loan.id}/my-return`, {
+            method: 'POST', headers: {Authorization: `Bearer ${token}`, 'Content-Type': 'application/json'},
+            body: JSON.stringify({itemIds, condition: 'NORMAL'})
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(result.message || 'Không thể trả sách. Vui lòng thử lại.');
+          window.location.reload();
+        } catch (error) {
+          feedback.textContent = error.message;
+          returning = false; returnButtons.forEach(button => button.disabled = false);
+        }
+      }
       const books = document.createElement('ul'); books.className = 'reading-books';
       for (const item of (loan.items || []).filter(item => history || !item.returnedAt)) {
         const row = document.createElement('li');
@@ -238,11 +258,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const detail = document.createElement('small'); detail.textContent = `${item.copy?.code ? 'Mã quyển: ' + item.copy.code + ' · ' : ''}Số lượng: ${item.quantity || 1}`;
         if (item.returnedAt) detail.textContent += ` · Đã trả ${dateLabel(item.returnedAt)}`;
         info.append(bookTitle, author, detail); row.append(cover, info);
+        if (!history && !item.returnedAt) {
+          const returnOne = document.createElement('button'); returnOne.type = 'button'; returnOne.className = 'btn btn-secondary return-one'; returnOne.textContent = 'Trả quyển này';
+          returnOne.addEventListener('click', () => returnBooks([item.id]));returnButtons.push(returnOne);row.append(returnOne);
+        }
         books.append(row);
       }
       card.append(title, dates, books);
+      if (!history) {
+        const remaining = (loan.items || []).filter(item => !item.returnedAt);
+        if (remaining.length) {
+          const actions = document.createElement('div'); actions.className = 'reading-return-actions';
+          const all = document.createElement('button'); all.type='button';all.className='btn';all.textContent=`Trả tất cả ${remaining.length} quyển còn lại`;
+          all.addEventListener('click', () => returnBooks(remaining.map(item => item.id)));returnButtons.push(all);
+          const hint=document.createElement('span');hint.textContent='Trả sách bình thường. Sách hỏng hoặc mất: liên hệ thủ thư để xử lý.';
+          actions.append(hint,all);card.append(actions);
+        }
+      }
       const dueDate = loan.dueDate ? new Date(`${loan.dueDate}T00:00:00`) : null;
-      const canRenew = loan.status === 'BORROWED' && Number(loan.renewalCount || 0) < 1 && dueDate && dueDate >= new Date(new Date().toDateString());
+      const canRenew = !history && loan.status === 'BORROWED' && Number(loan.renewalCount || 0) < 1 && dueDate && dueDate >= new Date(new Date().toDateString());
       if (canRenew) {
         const renewal = document.createElement('div'); renewal.className = 'renewal-controls';
         const label = document.createElement('label'); label.textContent = 'Thời gian gia hạn ';

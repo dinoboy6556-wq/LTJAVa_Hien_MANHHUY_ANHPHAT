@@ -82,6 +82,9 @@ public class UserPageController {
         return "user/history";
     }
 
+    @GetMapping("/user/cart")
+    public String cart() { return "user/cart"; }
+
     @GetMapping("/user/favorites")
     public String favorites() { return "user/favorites"; }
 }
