@@ -6,3 +6,5 @@ node_modules/
 dist/
 .env
 .env.local
+# Local database backups (contain personal data)
+database/backups/
