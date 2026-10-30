@@ -49,3 +49,7 @@ test('librarian can update available copy status through inventory',async()=>{
  const row=app.get('dialogBody').children[1];row.children[1].children[0].value='DAMAGED';await row.children[2].events.click();
  assert.ok(app.calls.some(call=>call.options?.method==='PATCH'));assert.equal(app.get('adminDialog').open,true);
 });
+
+test('reports is always the final management tab for admin and librarian',async()=>{
+ for(const role of ['ROLE_ADMIN','ROLE_LIBRARIAN']){const app=setup([role]);await flush();assert.equal(app.get('adminNav').children.at(-1).dataset.section,'reports');}
+});
