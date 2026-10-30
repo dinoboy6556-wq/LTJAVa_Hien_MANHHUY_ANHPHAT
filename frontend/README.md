@@ -12,7 +12,7 @@ npm install
 npm run dev
 ```
 
-Mở `http://localhost:3000`. Để trỏ tới backend khác, đặt biến `SPRING_API_URL` trước khi chạy Next, ví dụ `http://localhost:8080`.
+Mở `http://localhost:3000` trên máy đang chạy Next.js. Máy khác trong cùng mạng có thể dùng địa chỉ LAN mà Next.js in ra khi khởi động; `next.config.mjs` cho phép các IPv4 riêng tư của máy để tải dev assets và kết nối HMR. Để trỏ tới backend khác, đặt biến `SPRING_API_URL` trước khi chạy Next, ví dụ `http://localhost:8080`.
 
 ## Các route
 
