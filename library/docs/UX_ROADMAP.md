@@ -1,7 +1,7 @@
 # Giao diện chính và lộ trình — 27/10/2026
 
 ## Quyết định
-Thymeleaf (`/user`, `/user/books`, `/user/profile`) là giao diện độc giả chính. Chạy một Spring Boot, không cần npm. React trong `frontend/` là bản thử nghiệm lưu tham khảo, chưa đồng bộ tính năng; không coi hai ứng dụng là hai giao diện chính. Admin hiện tại vẫn ở `/index.html`, cần thống nhất thiết kế ở đợt sau.
+Frontend độc giả đang chuyển sang Next.js App Router trong `frontend/`, chạy riêng cổng 3000 và proxy `/api/*` tới Spring Boot cổng 8080. Bản Next có bảng API LIVE để quan sát request. Thymeleaf còn được giữ ở `/user` trong thời gian chuyển tiếp; trang quản trị hiện vẫn có ở Spring Boot `/admin`.
 
 ## Đợt ưu tiên đã triển khai
 - Tìm theo tên sách/tác giả/thể loại, lọc riêng tác giả/thể loại, khoảng **phí mượn mỗi cuốn**, còn sách/tạm hết.
