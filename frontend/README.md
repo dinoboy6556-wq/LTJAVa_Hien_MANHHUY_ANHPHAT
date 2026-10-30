@@ -1,46 +1,29 @@
-> Bản thử nghiệm tham khảo. Giao diện độc giả chính hiện là Thymeleaf tại http://localhost:8080/user. Không cần chạy React để dùng các chức năng mới.
+# Mộc Library — Next.js frontend
 
-# Giao diện người dùng thư viện Mộc (React + Vite)
+Giao diện độc giả dùng Next.js App Router, kết nối API Spring Boot qua proxy của Next. Bảng `API LIVE` ở góc phải màn hình hiển thị method, endpoint, mã HTTP và thời gian của request gần nhất.
 
-Frontend này được bổ sung riêng cho độc giả. Giao diện quản trị HTML hiện có trong Spring Boot không bị xóa hoặc thay thế.
+## Chạy local
 
-## Yêu cầu
-- Node.js 18 trở lên (khuyến nghị Node.js 20+)
-- Backend Spring Boot chạy tại `http://localhost:8080`
+Yêu cầu Node.js 20.9 trở lên và Spring Boot đang chạy tại `http://localhost:8080`.
 
-## Cài đặt và chạy
-Mở terminal tại thư mục `frontend` rồi chạy:
-
-```bash
+```powershell
+cd frontend
 npm install
 npm run dev
 ```
 
-Mở `http://localhost:5173`.
+Mở `http://localhost:3000` trên máy đang chạy Next.js. Máy khác trong cùng mạng có thể dùng địa chỉ LAN mà Next.js in ra khi khởi động; `next.config.mjs` cho phép các IPv4 riêng tư của máy để tải dev assets và kết nối HMR. Để trỏ tới backend khác, đặt biến `SPRING_API_URL` trước khi chạy Next, ví dụ `http://localhost:8080`.
 
-## Các trang
-- `/` — Trang chủ
-- `/sach` — Danh sách, tìm kiếm và lọc sách
-- `/sach/:id` — Chi tiết sách
-- `/dang-nhap` — Đăng nhập bằng API JWT hiện có
-- `/dang-ky` — Đăng ký độc giả
-- `/tai-khoan/sach-dang-muon` — Phiếu mượn hiện tại
-- `/tai-khoan/lich-su` — Lịch sử mượn/trả
+## Các route
 
-## Kết nối API
-`vite.config.js` chuyển tiếp `/api` sang `http://localhost:8080`. Token JWT được thêm vào `Authorization: Bearer ...` tự động trong `src/api.js`.
+- `/` trang chủ và sách gợi ý
+- `/books` tìm kiếm, lọc thể loại và phân trang
+- `/books/{id}` thông tin, đánh giá và sách liên quan
+- `/login`, `/register` đăng nhập JWT và đăng ký
+- `/account/loans`, `/account/history`, `/account/favorites` dữ liệu tài khoản
 
-API được sử dụng:
-- `POST /api/v1/auth/login`
-- `POST /api/v1/auth/register`
-- `GET /api/v1/books`
-- `GET /api/v1/books/{id}`
-- `GET /api/v1/categories`
-- `GET /api/v1/loans/my-loans`
+`lib/api.js` tập trung các hàm gọi `/api/v1/*`; `next.config.mjs` chuyển tiếp `/api/*` sang Spring Boot. Token gửi trong header `Authorization: Bearer ...`.
 
-Để khách chưa đăng nhập có thể xem danh mục sách, `SecurityConfig` được cập nhật để cho phép GET công khai với sách, danh mục và tác giả. Các thao tác còn lại vẫn theo quy tắc bảo vệ hiện tại.
+## API đang sử dụng
 
-## Lưu ý
-- Frontend không tự tạo dữ liệu sách giả; dữ liệu hiển thị lấy từ Spring Boot.
-- Backend hiện chưa cung cấp API mô tả dài/ảnh bìa sách, vì vậy giao diện dùng bìa minh họa CSS và thông tin mô tả chung ở trang chi tiết.
-- Tính năng mượn trực tuyến chưa được bật; trang người dùng hiển thị phiếu mượn từ API hiện có và hướng dẫn liên hệ thủ thư để mượn sách.
+`GET /books`, `GET /books/{id}`, `GET /books/{id}/related`, `GET /categories`, `GET/PUT/DELETE /favorites`, `GET/PUT /books/{id}/reviews`, `GET /loans/my-loans`, `POST /auth/login` và `POST /auth/register`.

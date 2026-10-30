@@ -48,6 +48,8 @@ Các lệnh kết nối database đọc `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`; 
 
 Trước khi chạy phiên bản quản lý từng quyển, đọc [hướng dẫn chuyển đổi book_copies](library/docs/BOOK_COPIES.md). Có bảng mới, hai cột khóa ngoại mới và bước chuyển dữ liệu tồn kho/phiếu đang mượn. Database Laragon của nhánh này là `library_db`.
 
-## Giao diện chính
+## Frontend Next.js
 
-Dùng Thymeleaf tại `/user`; React trong `frontend/` chỉ là bản thử nghiệm tham khảo. Xem [tiến độ UX và lộ trình](library/docs/UX_ROADMAP.md) để biết phần đã triển khai và checklist kiểm tra.
+Frontend độc giả mới dùng Next.js App Router tại `frontend/`; chạy riêng ở `http://localhost:3000`, còn Spring Boot cung cấp API tại cổng 8080. Vào thư mục `frontend`, chạy `npm install` rồi `npm run dev`. Next rewrite `/api/*` tới Spring Boot để request giữ cùng origin; bảng API LIVE ở góc màn hình hiện method, endpoint, HTTP status và thời gian phản hồi. Chi tiết route và các API được gọi nằm trong [README frontend](frontend/README.md). Trang Thymeleaf cũ vẫn ở `/user` trên cổng 8080 trong thời gian chuyển tiếp.
+
+Xem [tiến độ UX và lộ trình](library/docs/UX_ROADMAP.md) để biết phần đã triển khai và checklist kiểm tra.

@@ -3,6 +3,7 @@
 **/replay_pid*.log
 # Frontend
 node_modules/
+frontend/.next/
 dist/
 .env
 .env.local
