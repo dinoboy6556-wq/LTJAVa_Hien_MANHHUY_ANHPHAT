@@ -23,6 +23,14 @@ public class BookController {
         return ResponseEntity.ok(bookService.getAllBooks());
     }
 
+    @Autowired private com.example.library.service.CatalogService catalog;
+    @GetMapping("/catalog")
+    public org.springframework.data.domain.Page<Book> catalog(@RequestParam(defaultValue="") String q,@RequestParam(defaultValue="") String author,@RequestParam(defaultValue="") String category,@RequestParam(required=false) java.math.BigDecimal min,@RequestParam(required=false) java.math.BigDecimal max,@RequestParam(defaultValue="") String status,@RequestParam(defaultValue="title") String sort,@RequestParam(defaultValue="0") int page){return catalog.search(q,author,category,min,max,status,sort,page);}
+
+    @Autowired private com.example.library.service.HomeSelectionService homeSelections;
+    @GetMapping("/home-selections")
+    public com.example.library.service.HomeSelectionService.Selection homeSelections(){return homeSelections.get();}
+
     @GetMapping("/{id}")
     public ResponseEntity<Book> getBookById(@PathVariable Long id) {
         return ResponseEntity.ok(bookService.getBookById(id));

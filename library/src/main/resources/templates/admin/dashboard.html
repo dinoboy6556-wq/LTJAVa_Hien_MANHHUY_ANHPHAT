@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Quản trị — mộc.</title><link rel="stylesheet" th:href="@{/css/user.css}"><link rel="stylesheet" th:href="@{/css/admin.css}"></head>
-<body><header class="topbar"><a class="brand" href="/admin"><span class="brand-icon">▣</span><span><b>mộc.</b><small>QUẢN TRỊ THƯ VIỆN</small></span></a><a class="text-link" href="/user">← Trang độc giả</a><button id="adminLogout" class="btn btn-secondary" type="button">Đăng xuất</button></header>
+<body><header class="topbar"><a class="brand" href="/admin"><span class="brand-icon">▣</span><span><b>mộc.</b><small>QUẢN TRỊ THƯ VIỆN</small></span></a><a class="text-link" th:href="${@environment.getProperty('app.frontend-url', 'http://localhost:3000')}">← Trang độc giả</a><button id="adminLogout" class="btn btn-secondary" type="button">Đăng xuất</button></header>
 <main class="admin-shell"><aside class="admin-sidebar" aria-label="Các mục quản trị">
 <h2>Không gian quản trị</h2><nav id="adminNav"></nav><p id="adminIdentity"></p></aside>
 <div class="admin-content"><div class="admin-heading"><div><div class="eyebrow">VẬN HÀNH THƯ VIỆN</div><h1 id="sectionTitle">Tổng quan</h1></div><button id="adminRefresh" class="btn btn-secondary" type="button">Tải lại</button></div>

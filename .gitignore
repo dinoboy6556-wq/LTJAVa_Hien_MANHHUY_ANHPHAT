@@ -1,11 +1,48 @@
-# JVM crash and replay logs (any directory)
-**/hs_err_pid*.log
-**/replay_pid*.log
-# Frontend
+# Dependencies and generated frontend output
 node_modules/
-frontend/.next/
+/frontend/.next/
+/frontend/out/
+/frontend/.turbo/
+/frontend/.vercel/
 dist/
+
+# Build caches and compiler output
+*.tsbuildinfo
+*.class
+
+# Browser test output (keep tests and playwright.config.mjs tracked)
+/frontend/test-results/
+/frontend/playwright-report/
+/frontend/blob-report/
+coverage/
+.nyc_output/
+
+# Runtime logs and crash reports
+*.log
+hs_err_pid*.log
+replay_pid*.log
+
+# Local environment and secrets (keep templates shareable)
 .env
-.env.local
-# Local database backups (contain personal data)
-database/backups/
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+/library/src/main/resources/application-local.properties
+/library/src/main/resources/application-local.yml
+/library/src/main/resources/application-local.yaml
+
+# Local database backups; keep schema/data/migration scripts tracked
+/database/backups/
+/database/*.bak
+
+# Next.js-generated agent guide; local tool metadata
+/frontend/AGENTS.md
+
+# OS and editor temporary files
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~

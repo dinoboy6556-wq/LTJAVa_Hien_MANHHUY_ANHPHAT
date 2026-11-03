@@ -9,4 +9,6 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
     java.util.Optional<Favorite> findByUser_EmailAndBook_Id(String email, Long bookId);
     boolean existsByUser_EmailAndBook_Id(String email, Long bookId);
     void deleteByUser_EmailAndBook_Id(String email, Long bookId);
+    @org.springframework.data.jpa.repository.Query("select f.book.id, count(f) from Favorite f group by f.book.id")
+    java.util.List<Object[]> favoriteTotals();
 }

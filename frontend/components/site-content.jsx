@@ -1,0 +1,4 @@
+ 'use client';
+import {useEffect,useState} from 'react';import Link from 'next/link';import {api} from '../lib/api';
+export default function SiteContent(){const [entries,setEntries]=useState([]);useEffect(()=>{api.siteContent().then(setEntries).catch(()=>{});},[]);return <div className="container site-content-links"><Link href="/library">Đọc online & tin thư viện</Link>{entries.map(c=>c.kind==='PAGE'?<Link key={c.id} href={'/read/'+c.slug}>{c.title}</Link>:c.kind==='MENU'&&c.link?.startsWith('/user')?<Link key={c.id} href={legacyLink(c.link)}>{c.title}</Link>:c.kind==='CONFIG'?<p key={c.id}>{c.title}: {c.body}</p>:null)}</div>;}
+function legacyLink(link){return link.replace('/user/borrowed','/account/loans').replace('/user/history','/account/history').replace('/user/profile','/account/profile').replace('/user/favorites','/account/favorites').replace('/user/cart','/cart').replace('/user/library','/library').replace('/user','')||'/';}

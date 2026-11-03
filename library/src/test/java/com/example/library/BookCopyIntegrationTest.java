@@ -127,12 +127,12 @@ class BookCopyIntegrationTest {
     }
 
     @Test
-    void publicCopyListingDoesNotExposeBorrowerAndTemplateRenders() throws Exception {
+    void publicCopyListingDoesNotExposeBorrowerAndOldPageRedirects() throws Exception {
         Book book=book(1,1);inventory.initialize(book.getId());
         mvc.perform(get("/api/v1/books/"+book.getId()+"/copies")).andExpect(status().isOk())
             .andExpect(jsonPath("$[0].code").exists()).andExpect(jsonPath("$[0].book").doesNotExist());
-        mvc.perform(get("/user/books/"+book.getId())).andExpect(status().isOk())
-            .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Từng quyển sách"))));
+        mvc.perform(get("/user/books/"+book.getId())).andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("http://localhost:3000/books/"+book.getId()));
         mvc.perform(post("/api/v1/books/"+book.getId()+"/copies").contentType("application/json").content("{\"quantity\":1}"))
             .andExpect(status().is4xxClientError());
     }
@@ -187,12 +187,12 @@ class BookCopyIntegrationTest {
         var filtered=catalog.search("CatalogUnique","","",BigDecimal.valueOf(10000),BigDecimal.valueOf(13000),"available","price_desc",0);
         assertEquals(3,filtered.getTotalElements());assertEquals(0,BigDecimal.valueOf(12000).compareTo(filtered.getContent().get(0).getRentalPrice()));
         assertThrows(IllegalArgumentException.class,()->catalog.search("","","",BigDecimal.TEN,BigDecimal.ONE,"","",0));
-        mvc.perform(get("/user/books").param("q","CatalogUnique").param("sort","price_asc"))
-            .andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("Trang sau")));
-        mvc.perform(get("/user/books").param("q","no-matching-title-unique"))
-            .andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("Chưa tìm thấy")));
-        mvc.perform(get("/user/books").param("min","100").param("max","1"))
-            .andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("Khoảng phí mượn")));
+        mvc.perform(get("/api/v1/books/catalog").param("q","CatalogUnique").param("sort","price_asc"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(14));
+        mvc.perform(get("/api/v1/books/catalog").param("q","no-matching-title-unique"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(get("/api/v1/books/catalog").param("min","100").param("max","1"))
+            .andExpect(status().is4xxClientError());
     }
     @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
     @Autowired FineRepository fines;

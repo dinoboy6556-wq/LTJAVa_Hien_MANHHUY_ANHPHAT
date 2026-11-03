@@ -1,29 +1,21 @@
-# Mộc Library — Next.js frontend
+# Mộc — frontend độc giả Next.js
 
-Giao diện độc giả dùng Next.js App Router, kết nối API Spring Boot qua proxy của Next. Bảng `API LIVE` ở góc phải màn hình hiển thị method, endpoint, mã HTTP và thời gian của request gần nhất.
+## Chạy
+Node.js >=20.9. Bật MySQL Laragon và Spring Boot cổng 8080.
+Trong frontend: `npm install`, `npm run dev`. Mở http://localhost:3000.
+Production local: `npm run build`, `npm start`.
+SPRING_API_URL cấu hình backend proxy (mặc định http://localhost:8080).
 
-## Chạy local
+## Phân tách
+Next.js dựng tất cả trang độc giả. Spring Boot cung cấp REST API và dựng trang quản trị Thymeleaf tại /admin (Next proxy cùng origin).
+Không còn trang độc giả Thymeleaf; /user/... cũ chỉ redirect sang route Next.
+Danh sách trang: /, /books, /books/{id}, /login, /register, /cart, /account/profile, /account/favorites, /account/loans, /account/history, /library, /read/{slug}.
+Mọi API frontend đi qua lib/api.js; Xem lời gọi API bằng tab Network của trình duyệt.
 
-Yêu cầu Node.js 20.9 trở lên và Spring Boot đang chạy tại `http://localhost:8080`.
-
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-
-Mở `http://localhost:3000` trên máy đang chạy Next.js. Máy khác trong cùng mạng có thể dùng địa chỉ LAN mà Next.js in ra khi khởi động; `next.config.mjs` cho phép các IPv4 riêng tư của máy để tải dev assets và kết nối HMR. Để trỏ tới backend khác, đặt biến `SPRING_API_URL` trước khi chạy Next, ví dụ `http://localhost:8080`.
-
-## Các route
-
-- `/` trang chủ và sách gợi ý
-- `/books` tìm kiếm, lọc thể loại và phân trang
-- `/books/{id}` thông tin, đánh giá và sách liên quan
-- `/login`, `/register` đăng nhập JWT và đăng ký
-- `/account/loans`, `/account/history`, `/account/favorites` dữ liệu tài khoản
-
-`lib/api.js` tập trung các hàm gọi `/api/v1/*`; `next.config.mjs` chuyển tiếp `/api/*` sang Spring Boot. Token gửi trong header `Authorization: Bearer ...`.
-
-## API đang sử dụng
-
-`GET /books`, `GET /books/{id}`, `GET /books/{id}/related`, `GET /categories`, `GET/PUT/DELETE /favorites`, `GET/PUT /books/{id}/reviews`, `GET /loans/my-loans`, `POST /auth/login` và `POST /auth/register`.
+## Kiểm thử
+- npm run lint
+- npm run build
+- node --test tests/cart.test.mjs
+- npm run test:e2e (Microsoft Edge đã cài, app đang chạy ở 3000). Các thao tác mượn/thu tiền dùng mock API để không sửa database thật.
+- PowerShell `$env:RUN_LIVE_SMOKE='1'; npm run test:e2e` bật thêm 3 ca đăng nhập demo/read-only API thật. Chỉ dùng với database demo local có tài khoản mẫu.
+Chi tiết route/API/thanh toán xem library/docs/FRONTEND_BACKEND_SPLIT.md.

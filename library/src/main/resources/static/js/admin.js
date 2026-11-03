@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const today = () => new Date().toLocaleDateString('sv-SE');
   const loanStatus = loan => loan.status === 'BORROWED' && loan.dueDate < today() ? 'OVERDUE' : loan.status;
   const labels = {AVAILABLE:'Còn sách',OUT_OF_STOCK:'Hết sách',BORROWED:'Đang mượn',RETURNED:'Đã trả',OVERDUE:'Quá hạn',DAMAGED:'Hỏng',LOST:'Mất',SOLD:'Đã bán',UNAVAILABLE:'Chưa sẵn sàng',paid:'Đã thanh toán',unpaid:'Chưa thanh toán',enabled:'Hoạt động',disabled:'Đã khóa'};
-  const titles = {overview:'Tổng quan',books:'Sách & tồn kho',loans:'Phiếu mượn',fines:'Khoản phạt',sales:'Bán sách & hóa đơn',users:'Tài khoản',payments:'Thanh toán mượn',reports:'Báo cáo',categories:'Thể loại sách',authors:'Tác giả',publishers:'Nhà xuất bản',ebooks:'Sách điện tử',posts:'Bài viết & tin thư viện',pages:'Trang thông tin',config:'Cấu hình thư viện',menus:'Menu điều hướng'};
+  const titles = {overview:'Tổng quan',books:'Sách & tồn kho',loans:'Phiếu mượn',fines:'Khoản phạt',sales:'Bán sách & hóa đơn',users:'Tài khoản',payments:'Thanh toán mượn',categories:'Thể loại sách',authors:'Tác giả',publishers:'Nhà xuất bản',ebooks:'Sách điện tử',posts:'Bài viết & tin thư viện',pages:'Trang thông tin',config:'Cấu hình thư viện',menus:'Menu điều hướng',reports:'Báo cáo'};
   const endpoints = {books:'/api/v1/books',loans:'/api/v1/loans',fines:'/api/v1/fines',sales:'/api/v1/sales',users:'/api/v1/admin/users',payments:'/api/v1/payments'};
   const columns = {payments:['Mã giao dịch','Email','Mã VNPay','Số tiền','Phương thức','Trạng thái','Mã phiếu','Chi tiết','Thao tác'],books:['Sách','Tác giả','Thể loại','Còn trong kho','Tổng quyển','Phí mượn','Giá bán','Thao tác'],loans:['Mã phiếu','Độc giả','Email','Sách','Số quyển','Mã quyển','Ngày mượn','Hạn trả','Trạng thái','Thao tác'],fines:['Mã phạt','Email độc giả','Phiếu','Lý do','Số tiền','Trạng thái','Thao tác'],sales:['Hóa đơn','Người mua','Ngày tạo','Sách','Tổng tiền'],users:['Họ tên','Email','Điện thoại','Địa chỉ','Quyền','Trạng thái','Thao tác']};
   const taxonomy={categories:['description','Mô tả'],authors:['biography','Tiểu sử'],publishers:['address','Địa chỉ']};
@@ -29,10 +29,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   let section = 'overview', rows = [], page = 0, isAdmin = false, generation = 0;
   const pageSize = 10;
-  function logout() { localStorage.removeItem('libraryToken'); localStorage.removeItem('libraryProfile'); location.href='/user/login'; }
+  function logout() { localStorage.removeItem('library_token');localStorage.removeItem('library_user'); localStorage.removeItem('libraryToken'); localStorage.removeItem('libraryProfile'); location.href='/admin/login'; }
   $('adminLogout').addEventListener('click', logout);
   async function request(url, options = {}) {
-    const response = await fetch(url, {...options,headers:{Authorization:`Bearer ${localStorage.getItem('libraryToken')}`, ...(options.body ? {'Content-Type':'application/json'} : {}), ...options.headers}});
+    const response = await fetch(url, {...options,headers:{Authorization:`Bearer ${(localStorage.getItem('library_token')||localStorage.getItem('libraryToken'))}`, ...(options.body ? {'Content-Type':'application/json'} : {}), ...options.headers}});
     if(response.status===401){logout();throw new Error('Phiên đăng nhập đã hết hạn.');}
     const data=await response.json().catch(()=>null);
     if(!response.ok) throw new Error(typeof data?.message==='string'?data.message:`Không thể thực hiện (${response.status}).`);
@@ -176,8 +176,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(endpoints[key])render();load();
   }
   $('adminRefresh').addEventListener('click',load);$('adminSearch').addEventListener('input',()=>{page=0;render();});$('adminFilter').addEventListener('change',()=>{page=0;render();});$('adminPrevious').addEventListener('click',()=>{page--;render();});$('adminNext').addEventListener('click',()=>{page++;render();});
-  document.querySelectorAll('[data-report]').forEach(button=>button.addEventListener('click',async()=>{button.disabled=true;try{const response=await fetch(`/api/v1/admin/reports/${button.dataset.report}.csv`,{headers:{Authorization:`Bearer ${localStorage.getItem('libraryToken')}`}});if(!response.ok)throw new Error('Không thể xuất báo cáo. Hãy kiểm tra quyền tài khoản.');const url=URL.createObjectURL(await response.blob()),link=el('a');link.href=url;link.download=`library-${button.dataset.report}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(error){$('adminMessage').textContent=error.message;}finally{button.disabled=false;}}));
-  if(!localStorage.getItem('libraryToken')){location.href='/user/login';return;}
+  document.querySelectorAll('[data-report]').forEach(button=>button.addEventListener('click',async()=>{button.disabled=true;try{const response=await fetch(`/api/v1/admin/reports/${button.dataset.report}.csv`,{headers:{Authorization:`Bearer ${(localStorage.getItem('library_token')||localStorage.getItem('libraryToken'))}`}});if(!response.ok)throw new Error('Không thể xuất báo cáo. Hãy kiểm tra quyền tài khoản.');const url=URL.createObjectURL(await response.blob()),link=el('a');link.href=url;link.download=`library-${button.dataset.report}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(error){$('adminMessage').textContent=error.message;}finally{button.disabled=false;}}));
+  if(!(localStorage.getItem('library_token')||localStorage.getItem('libraryToken'))){location.href='/admin/login';return;}
   try{const profile=await request('/api/v1/profile');isAdmin=profile.roles?.includes('ROLE_ADMIN');if(!isAdmin&&!profile.roles?.includes('ROLE_LIBRARIAN'))throw new Error('Tài khoản không có quyền quản trị thư viện.');$('adminIdentity').textContent=`${profile.fullName} · ${profile.email}`;
     for(const [key,title] of Object.entries(titles)){if(['users','payments','config','menus'].includes(key)&&!isAdmin)continue;const button=el('button',title);button.type='button';button.dataset.section=key;button.addEventListener('click',()=>navigate(key));$('adminNav').append(button);}navigate('overview');
   }catch(error){$('adminMessage').textContent=error.message;$('adminRefresh').disabled=true;}

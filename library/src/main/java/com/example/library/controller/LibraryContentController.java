@@ -18,4 +18,6 @@ public class LibraryContentController {
   value.setKind(kind);value.setTitle(input.getTitle().trim());value.setSlug(input.getSlug());value.setBody(input.getBody());value.setLink(input.getLink());value.setBookId(kind.equals("EBOOK")?input.getBookId():null);value.setPublished(input.isPublished());value.setSortOrder(input.getSortOrder());return repo.save(value);
  }
  @GetMapping("/public") public List<LibraryContent> published(){return repo.findByPublishedTrueOrderBySortOrderAscIdDesc().stream().filter(v->!v.getKind().equals("EBOOK")).toList();}
+ @GetMapping("/catalog") public List<LibraryContent> catalog(){return repo.findByPublishedTrueOrderBySortOrderAscIdDesc().stream().filter(v->Set.of("EBOOK","POST","PAGE").contains(v.getKind())).map(v->{LibraryContent summary=new LibraryContent();summary.setId(v.getId());summary.setKind(v.getKind());summary.setTitle(v.getTitle());summary.setSlug(v.getSlug());summary.setBookId(v.getBookId());summary.setPublished(true);return summary;}).toList();}
+ @GetMapping("/read/{slug}") public LibraryContent read(@PathVariable String slug){return repo.findBySlugAndPublishedTrue(slug).filter(v->Set.of("EBOOK","POST","PAGE").contains(v.getKind())).orElseThrow(()->new com.example.library.exception.ResourceNotFoundException("Không tìm thấy nội dung"));}
 }
