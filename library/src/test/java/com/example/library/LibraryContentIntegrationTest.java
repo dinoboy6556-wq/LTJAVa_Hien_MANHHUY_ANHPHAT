@@ -6,12 +6,13 @@ class LibraryContentIntegrationTest {
  @Autowired MockMvc mvc;
  @Test @WithMockUser(roles="LIBRARIAN") void librarianCanPublishPageButCannotEditConfig() throws Exception {
   mvc.perform(post("/api/v1/content/manage/PAGE").contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"About\",\"slug\":\"about\",\"body\":\"Hello <script>bad</script>\",\"published\":true}")).andExpect(status().isOk());
-  mvc.perform(get("/user/read/about")).andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("&lt;script&gt;")));
+  mvc.perform(get("/api/v1/content/read/about")).andExpect(status().isOk()).andExpect(jsonPath("$.body").value("Hello <script>bad</script>"));
+  mvc.perform(get("/user/read/about")).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("http://localhost:3000/read/about"));
   mvc.perform(post("/api/v1/content/manage/CONFIG").contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"Site\",\"slug\":\"site\"}")).andExpect(status().isForbidden());
  }
  @Test @WithMockUser(roles="ADMIN") void draftsAreNotPublicAndMenuRejectsExternalLinks() throws Exception {
   mvc.perform(post("/api/v1/content/manage/PAGE").contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"Draft\",\"slug\":\"draft\",\"published\":false}")).andExpect(status().isOk());
-  mvc.perform(get("/user/read/draft")).andExpect(status().isNotFound());
+  mvc.perform(get("/api/v1/content/read/draft")).andExpect(status().isNotFound());
   mvc.perform(get("/api/v1/content/public")).andExpect(jsonPath("$.length()").value(0));
   mvc.perform(post("/api/v1/content/manage/MENU").contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"Bad\",\"slug\":\"bad\",\"link\":\"javascript:alert(1)\"}")).andExpect(status().is4xxClientError());
  }

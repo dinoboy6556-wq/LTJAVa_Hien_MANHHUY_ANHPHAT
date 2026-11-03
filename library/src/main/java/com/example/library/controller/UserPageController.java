@@ -1,90 +1,9 @@
 package com.example.library.controller;
-
-import com.example.library.entity.Book;
-import com.example.library.service.BookService;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
-
-import java.util.List;
-import java.util.stream.Collectors;
-
-@Controller
-public class UserPageController {
-    private final BookService bookService;
-    private final com.example.library.service.CatalogService catalog;
-
-    public UserPageController(BookService bookService, com.example.library.service.CatalogService catalog) {
-        this.catalog = catalog;
-        this.bookService = bookService;
-    }
-
-    @GetMapping({"/", "/user"})
-    public String home(Model model) {
-        List<Book> books = bookService.getAllBooks();
-        model.addAttribute("books", books.stream().limit(8).toList());
-        model.addAttribute("totalBooks", books.size());
-        return "user/home";
-    }
-
-    @GetMapping("/user/books")
-    public String books(@RequestParam(defaultValue="") String q,
-            @RequestParam(defaultValue="") String author, @RequestParam(defaultValue="") String category,
-            @RequestParam(required=false) java.math.BigDecimal min, @RequestParam(required=false) java.math.BigDecimal max,
-            @RequestParam(defaultValue="") String status, @RequestParam(defaultValue="title") String sort,
-            @RequestParam(defaultValue="0") int page, Model model) {
-        org.springframework.data.domain.Page<Book> results;
-        try { results = catalog.search(q,author,category,min,max,status,sort,page); }
-        catch (IllegalArgumentException ex) {
-            results = org.springframework.data.domain.Page.empty(); model.addAttribute("filterError",ex.getMessage());
-        }
-        model.addAttribute("books",results.getContent()); model.addAttribute("result",results);
-        int firstPage = Math.max(0, results.getNumber() - 2);
-        int lastPage = Math.min(results.getTotalPages() - 1, results.getNumber() + 2);
-        model.addAttribute("pageNumbers", firstPage <= lastPage
-                ? java.util.stream.IntStream.rangeClosed(firstPage, lastPage).boxed().toList()
-                : List.of());
-        model.addAttribute("q",q); model.addAttribute("author",author); model.addAttribute("category",category);
-        model.addAttribute("min",min); model.addAttribute("max",max); model.addAttribute("status",status); model.addAttribute("sort",sort);
-        return "user/books";
-    }
-
-    @GetMapping("/user/books/{id}")
-    public String bookDetail(@PathVariable Long id, Model model) {
-        model.addAttribute("book", bookService.getBookById(id));
-        return "user/book-detail";
-    }
-
-    @GetMapping("/user/profile")
-    public String profile() {
-        return "user/profile";
-    }
-
-    @GetMapping("/user/login")
-    public String login() {
-        return "user/login";
-    }
-
-    @GetMapping("/user/register")
-    public String register() {
-        return "user/register";
-    }
-
-    @GetMapping("/user/borrowed")
-    public String borrowed() {
-        return "user/borrowed";
-    }
-
-    @GetMapping("/user/history")
-    public String history() {
-        return "user/history";
-    }
-
-    @GetMapping("/user/cart")
-    public String cart() { return "user/cart"; }
-
-    @GetMapping("/user/favorites")
-    public String favorites() { return "user/favorites"; }
+import org.springframework.stereotype.Controller;import org.springframework.beans.factory.annotation.Value;import org.springframework.web.bind.annotation.*;import jakarta.servlet.http.HttpServletRequest;import org.springframework.web.util.UriComponentsBuilder;
+@Controller public class UserPageController {
+ @Value("${app.frontend-url:http://localhost:3000}") private String frontend;
+ @GetMapping({"/","/user","/user/**"}) public String redirect(HttpServletRequest request){
+  String path=request.getRequestURI();String target=switch(path){case "/","/user","/user/"->"/";case "/user/login"->"/login";case "/user/register"->"/register";case "/user/profile"->"/account/profile";case "/user/borrowed"->"/account/loans";case "/user/history"->"/account/history";case "/user/favorites"->"/account/favorites";case "/user/cart"->"/cart";case "/user/library"->"/library";default->path.substring(5);};
+  String query=request.getQueryString();return "redirect:"+frontend.replaceAll("/+$","")+target+(query==null?"":"?"+query);
+ }
 }

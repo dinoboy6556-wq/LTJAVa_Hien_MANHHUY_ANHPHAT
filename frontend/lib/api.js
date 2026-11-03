@@ -21,6 +21,7 @@ export async function apiRequest(path, options = {}) {
     let data = null;
     if (text) { try { data = JSON.parse(text); } catch { data = text; } }
     emitApiCall({ method, path: API_ROOT + path, status: response.status, duration: Math.round(performance.now() - started), ok: response.ok });
+    if(response.status===401){['library_token','library_user','libraryToken','libraryProfile'].forEach(k=>localStorage.removeItem(k));window.dispatchEvent(new Event('moc:session'));}
     if (!response.ok) throw new Error(data?.message || data?.error || (typeof data === 'string' ? data : 'API trả về HTTP ' + response.status));
     return data;
   } catch (error) {
@@ -30,6 +31,20 @@ export async function apiRequest(path, options = {}) {
 }
 
 export const api = {
+  updateProfile: (body) => apiRequest('/profile',{method:'PUT',body:JSON.stringify(body)}),
+  returnLoan: (id,itemIds) => apiRequest(`/loans/${id}/my-return`,{method:'POST',body:JSON.stringify({condition:'NORMAL',...(itemIds?{itemIds}:{})})}),
+  renew: (id,days) => apiRequest(`/loans/${id}/renew`,{method:'POST',body:JSON.stringify({days})}),
+  fines: () => apiRequest('/fines/my-fines'),
+  reservations: () => apiRequest('/reservations'),
+  reserve: (id) => apiRequest('/reservations/'+id,{method:'PUT'}),
+  cancelReservation: (id) => apiRequest('/reservations/'+id,{method:'DELETE'}),
+  notifications: () => apiRequest('/notifications'),
+  payments: () => apiRequest('/payments/my'),
+  checkout: (method,body,key) => apiRequest(method==='CASH'?'/payments/cash':'/payments/checkout',{method:'POST',headers:{'Idempotency-Key':key},body:JSON.stringify(body)}),
+  content: () => apiRequest('/content/catalog'),
+  read: (slug) => apiRequest('/content/read/'+encodeURIComponent(slug)),
+  siteContent: () => apiRequest('/content/public'),
+  profile: () => apiRequest('/profile'),
   books: () => apiRequest('/books'),
   book: (id) => apiRequest('/books/' + id),
   relatedBooks: (id) => apiRequest('/books/' + id + '/related'),

@@ -29,10 +29,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   let section = 'overview', rows = [], page = 0, isAdmin = false, generation = 0;
   const pageSize = 10;
-  function logout() { localStorage.removeItem('libraryToken'); localStorage.removeItem('libraryProfile'); location.href='/user/login'; }
+  function logout() { localStorage.removeItem('library_token');localStorage.removeItem('library_user'); localStorage.removeItem('libraryToken'); localStorage.removeItem('libraryProfile'); location.href='/admin/login'; }
   $('adminLogout').addEventListener('click', logout);
   async function request(url, options = {}) {
-    const response = await fetch(url, {...options,headers:{Authorization:`Bearer ${localStorage.getItem('libraryToken')}`, ...(options.body ? {'Content-Type':'application/json'} : {}), ...options.headers}});
+    const response = await fetch(url, {...options,headers:{Authorization:`Bearer ${(localStorage.getItem('library_token')||localStorage.getItem('libraryToken'))}`, ...(options.body ? {'Content-Type':'application/json'} : {}), ...options.headers}});
     if(response.status===401){logout();throw new Error('Phiên đăng nhập đã hết hạn.');}
     const data=await response.json().catch(()=>null);
     if(!response.ok) throw new Error(typeof data?.message==='string'?data.message:`Không thể thực hiện (${response.status}).`);
@@ -176,8 +176,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(endpoints[key])render();load();
   }
   $('adminRefresh').addEventListener('click',load);$('adminSearch').addEventListener('input',()=>{page=0;render();});$('adminFilter').addEventListener('change',()=>{page=0;render();});$('adminPrevious').addEventListener('click',()=>{page--;render();});$('adminNext').addEventListener('click',()=>{page++;render();});
-  document.querySelectorAll('[data-report]').forEach(button=>button.addEventListener('click',async()=>{button.disabled=true;try{const response=await fetch(`/api/v1/admin/reports/${button.dataset.report}.csv`,{headers:{Authorization:`Bearer ${localStorage.getItem('libraryToken')}`}});if(!response.ok)throw new Error('Không thể xuất báo cáo. Hãy kiểm tra quyền tài khoản.');const url=URL.createObjectURL(await response.blob()),link=el('a');link.href=url;link.download=`library-${button.dataset.report}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(error){$('adminMessage').textContent=error.message;}finally{button.disabled=false;}}));
-  if(!localStorage.getItem('libraryToken')){location.href='/user/login';return;}
+  document.querySelectorAll('[data-report]').forEach(button=>button.addEventListener('click',async()=>{button.disabled=true;try{const response=await fetch(`/api/v1/admin/reports/${button.dataset.report}.csv`,{headers:{Authorization:`Bearer ${(localStorage.getItem('library_token')||localStorage.getItem('libraryToken'))}`}});if(!response.ok)throw new Error('Không thể xuất báo cáo. Hãy kiểm tra quyền tài khoản.');const url=URL.createObjectURL(await response.blob()),link=el('a');link.href=url;link.download=`library-${button.dataset.report}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(error){$('adminMessage').textContent=error.message;}finally{button.disabled=false;}}));
+  if(!(localStorage.getItem('library_token')||localStorage.getItem('libraryToken'))){location.href='/admin/login';return;}
   try{const profile=await request('/api/v1/profile');isAdmin=profile.roles?.includes('ROLE_ADMIN');if(!isAdmin&&!profile.roles?.includes('ROLE_LIBRARIAN'))throw new Error('Tài khoản không có quyền quản trị thư viện.');$('adminIdentity').textContent=`${profile.fullName} · ${profile.email}`;
     for(const [key,title] of Object.entries(titles)){if(['users','payments','config','menus'].includes(key)&&!isAdmin)continue;const button=el('button',title);button.type='button';button.dataset.section=key;button.addEventListener('click',()=>navigate(key));$('adminNav').append(button);}navigate('overview');
   }catch(error){$('adminMessage').textContent=error.message;$('adminRefresh').disabled=true;}

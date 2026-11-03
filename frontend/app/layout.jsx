@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import './globals.css';
+import SiteContent from '../components/site-content';
 import SiteHeader from '../components/site-header';
 import ApiMonitor from '../components/api-monitor';
 
@@ -8,5 +10,5 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
-  return <html lang="vi"><body><SiteHeader />{children}<footer className="site-footer"><div className="container footer-inner"><a className="wordmark" href="/">mộc<span>.</span></a><span>Đọc chậm · Nghĩ sâu · Sống đẹp</span><span>© {new Date().getFullYear()} Mộc Library</span></div></footer><ApiMonitor /></body></html>;
+  return <html lang="vi" data-scroll-behavior="smooth"><body><SiteHeader />{children}<footer className="site-footer"><div className="container footer-inner"><Link className="wordmark" href="/">mộc<span>.</span></Link><span>Đọc chậm · Nghĩ sâu · Sống đẹp</span><span>© {new Date().getFullYear()} Mộc Library</span></div><SiteContent/></footer><ApiMonitor /></body></html>;
 }

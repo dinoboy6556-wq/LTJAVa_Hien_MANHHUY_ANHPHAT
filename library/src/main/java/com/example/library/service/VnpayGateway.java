@@ -11,7 +11,7 @@ public class VnpayGateway {
  @Value("${app.vnpay.tmn-code:}") private String merchant;
  @Value("${app.vnpay.hash-secret:}") private String secret;
  @Value("${app.vnpay.url:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}") private String url;
- @Value("${app.vnpay.return-url:http://localhost:8080/user/cart}") private String returnUrl;
+ @Value("${app.vnpay.return-url:http://localhost:3000/cart}") private String returnUrl;
  public String merchant(){return merchant;}
  public void requireConfigured(){if(merchant.isBlank()||secret.isBlank())throw new IllegalStateException("Chưa cấu hình VNPay sandbox. Cần VNPAY_TMN_CODE và VNPAY_HASH_SECRET.");}
  public String query(Map<String,String> values){var sorted=new TreeMap<>(values);return sorted.entrySet().stream().filter(e->e.getValue()!=null&&!e.getValue().isEmpty()).map(e->URLEncoder.encode(e.getKey(),StandardCharsets.US_ASCII)+"="+URLEncoder.encode(e.getValue(),StandardCharsets.US_ASCII)).collect(java.util.stream.Collectors.joining("&"));}
