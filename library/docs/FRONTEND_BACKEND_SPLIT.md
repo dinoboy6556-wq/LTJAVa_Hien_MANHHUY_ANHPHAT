@@ -21,7 +21,7 @@
 | /books/{id} | PUT/DELETE /reservations/{bookId}; GET/PUT /books/{id}/reviews |
 | /library, /read/{slug} | GET /content/catalog, /content/read/{slug} |
 
-API frontend tập trung tại frontend/lib/api.js, mọi request dùng /api/v1 và Bearer token. Các thành phần React không truy cập database. Bảng API LIVE hiển thị request để theo dõi.
+API frontend tập trung tại frontend/lib/api.js, mọi request dùng /api/v1 và Bearer token. Các thành phần React không truy cập database. Đã bỏ bảng API LIVE khỏi giao diện khách hàng; xem request tại DevTools > Network.
 Token library_token, hồ sơ library_user; khôi phục token cũ cùng origin nếu còn libraryToken. Không chuyển token qua URL. Huy hiệu giỏ đếm tổng quyển, lưu giỏ theo email và cập nhật tức thì.
 
 ## Thanh toán

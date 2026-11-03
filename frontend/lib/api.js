@@ -1,9 +1,5 @@
 const API_ROOT = '/api/v1';
 
-function emitApiCall(entry) {
-  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('moc:api-call', { detail: entry }));
-}
-
 export async function apiRequest(path, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
   const headers = new Headers(options.headers || {});
@@ -13,19 +9,18 @@ export async function apiRequest(path, options = {}) {
     const token = localStorage.getItem('library_token');
     if (token) headers.set('Authorization', 'Bearer ' + token);
   }
-  const started = performance.now();
   let response;
   try {
     response = await fetch(API_ROOT + path, { ...options, method, headers, cache: 'no-store' });
     const text = await response.text();
     let data = null;
     if (text) { try { data = JSON.parse(text); } catch { data = text; } }
-    emitApiCall({ method, path: API_ROOT + path, status: response.status, duration: Math.round(performance.now() - started), ok: response.ok });
+
     if(response.status===401){['library_token','library_user','libraryToken','libraryProfile'].forEach(k=>localStorage.removeItem(k));window.dispatchEvent(new Event('moc:session'));}
     if (!response.ok) throw new Error(data?.message || data?.error || (typeof data === 'string' ? data : 'API trả về HTTP ' + response.status));
     return data;
   } catch (error) {
-    if (!response) emitApiCall({ method, path: API_ROOT + path, status: 'ERR', duration: Math.round(performance.now() - started), ok: false });
+
     throw error;
   }
 }
@@ -45,6 +40,7 @@ export const api = {
   read: (slug) => apiRequest('/content/read/'+encodeURIComponent(slug)),
   siteContent: () => apiRequest('/content/public'),
   profile: () => apiRequest('/profile'),
+  homeSelections: () => apiRequest('/books/home-selections'),
   books: () => apiRequest('/books'),
   book: (id) => apiRequest('/books/' + id),
   relatedBooks: (id) => apiRequest('/books/' + id + '/related'),
@@ -62,5 +58,5 @@ export const api = {
 };
 
 export function formatApiError(error) {
-  return error?.message || 'Không thể kết nối API. Kiểm tra Spring Boot và thử lại.';
+  return error?.message || 'Chưa thể kết nối thư viện. Vui lòng thử lại sau.';
 }

@@ -10,7 +10,7 @@ SPRING_API_URL cấu hình backend proxy (mặc định http://localhost:8080).
 Next.js dựng tất cả trang độc giả. Spring Boot cung cấp REST API và dựng trang quản trị Thymeleaf tại /admin (Next proxy cùng origin).
 Không còn trang độc giả Thymeleaf; /user/... cũ chỉ redirect sang route Next.
 Danh sách trang: /, /books, /books/{id}, /login, /register, /cart, /account/profile, /account/favorites, /account/loans, /account/history, /library, /read/{slug}.
-Mọi API frontend đi qua lib/api.js; API LIVE hiển thị method/endpoint/status.
+Mọi API frontend đi qua lib/api.js; Xem lời gọi API bằng tab Network của trình duyệt.
 
 ## Kiểm thử
 - npm run lint
