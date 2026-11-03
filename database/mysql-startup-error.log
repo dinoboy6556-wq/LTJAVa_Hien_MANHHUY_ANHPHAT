@@ -1,9 +1,0 @@
-2026-10-29T02:47:03.269517Z 0 [System] [MY-015015] [Server] MySQL Server - start.
-2026-10-29T02:47:03.616472Z 0 [Warning] [MY-010097] [Server] Insecure configuration for --secure-file-priv: Current value does not restrict location of generated files. Consider setting it to a valid, non-empty path.
-2026-10-29T02:47:03.617440Z 0 [System] [MY-010116] [Server] F:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysqld.exe (mysqld 8.4.3) starting as process 15536
-2026-10-29T02:47:03.639937Z 0 [Warning] [MY-010091] [Server] Can't create test file F:\laragon\data\mysql-8.4\mysqld_tmp_file_case_insensitive_test.lower-test
-2026-10-29T02:47:03.640346Z 0 [Warning] [MY-010091] [Server] Can't create test file F:\laragon\data\mysql-8.4\mysqld_tmp_file_case_insensitive_test.lower-test
-2026-10-29T02:47:03.642649Z 0 [ERROR] [MY-013276] [Server] Failed to set datadir to 'F:\laragon\data\mysql-8.4\' (OS errno: 13 - Permission denied)
-2026-10-29T02:47:03.650092Z 0 [ERROR] [MY-010119] [Server] Aborting
-2026-10-29T02:47:03.657318Z 0 [System] [MY-010910] [Server] F:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysqld.exe: Shutdown complete (mysqld 8.4.3)  MySQL Community Server - GPL.
-2026-10-29T02:47:03.657325Z 0 [System] [MY-015016] [Server] MySQL Server - end.
