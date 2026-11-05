@@ -60,7 +60,7 @@ public class DemoActivityInitializer implements CommandLineRunner {
                 .fineAmount(new BigDecimal("50000")).status(LoanStatus.OVERDUE).renewalCount(0).build();
         LoanItem loanItem = LoanItem.builder().loan(loan).book(loanBook).copy(loanCopy).quantity(1)
                 .rentalPrice(loanBook.getRentalPrice()).build();
-        loan.setItems(List.of(loanItem));
+        loan.setItems(new java.util.ArrayList<>(List.of(loanItem)));
         Loan savedLoan = loans.save(loan);
         fines.save(Fine.builder().loan(savedLoan).amount(new BigDecimal("50000"))
                 .reason("Phạt quá hạn — dữ liệu minh họa").paid(false).build());
@@ -70,7 +70,7 @@ public class DemoActivityInitializer implements CommandLineRunner {
         Sale sale = Sale.builder().user(demo).totalAmount(saleBook.getSalePrice()).build();
         SaleItem saleItem = SaleItem.builder().sale(sale).book(saleBook).copy(saleCopy).quantity(1)
                 .unitPrice(saleBook.getSalePrice()).subtotal(saleBook.getSalePrice()).build();
-        sale.setItems(List.of(saleItem));
+        sale.setItems(new java.util.ArrayList<>(List.of(saleItem)));
         sales.save(sale);
 
         Book favoriteBook = catalog.get(Math.min(2, catalog.size() - 1));

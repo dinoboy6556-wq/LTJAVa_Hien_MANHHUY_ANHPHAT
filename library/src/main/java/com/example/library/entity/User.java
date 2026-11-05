@@ -27,6 +27,10 @@ public class User {
     private String phone;
     private String address;
 
+    @Lob
+    @Column(name = "avatar_data", columnDefinition = "LONGTEXT")
+    private String avatarData;
+
     @Column(nullable = false, columnDefinition = "boolean default true")
     @Builder.Default
     private boolean enabled = true;

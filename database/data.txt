@@ -475,6 +475,7 @@ DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `address` varchar(255) DEFAULT NULL,
+  `avatar_data` longtext,
   `email` varchar(255) NOT NULL,
   `enabled` tinyint(1) NOT NULL DEFAULT '1',
   `full_name` varchar(255) NOT NULL,
@@ -491,7 +492,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'Hà Nội','admin@library.com',1,'Trần Quản Trị','$2a$10$yDCn8zdRsUfVEwhux.xkK.g/o8/TEDGSfnEJnzuOylllfuU2cJIoC','0901234567'),(2,'TP. Hồ Chí Minh','user@library.com',1,'Lê Văn Mượn','$2a$10$u02BIIfCGi.FouRPlf2jqekitGs7tet0PEslLeJmFtsJxiw8t4zKC','0987654321'),(3,NULL,'dinoboy6556@gmail.com',1,'Minh Hiền','$2a$10$36Cqov4xmzOsqWjv2uT0wuodzx/3F54n2yX7/KFI1Gnc5a5FBtg.W',NULL);
+INSERT INTO `users` (`id`, `address`, `email`, `enabled`, `full_name`, `password`, `phone`) VALUES (1,'Hà Nội','admin@library.com',1,'Trần Quản Trị','$2a$10$yDCn8zdRsUfVEwhux.xkK.g/o8/TEDGSfnEJnzuOylllfuU2cJIoC','0901234567'),(2,'TP. Hồ Chí Minh','user@library.com',1,'Lê Văn Mượn','$2a$10$u02BIIfCGi.FouRPlf2jqekitGs7tet0PEslLeJmFtsJxiw8t4zKC','0987654321'),(3,NULL,'dinoboy6556@gmail.com',1,'Minh Hiền','$2a$10$36Cqov4xmzOsqWjv2uT0wuodzx/3F54n2yX7/KFI1Gnc5a5FBtg.W',NULL);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 

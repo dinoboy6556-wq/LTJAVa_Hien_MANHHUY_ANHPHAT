@@ -61,7 +61,9 @@ public class LoanService {
         Loan loan = new Loan();
         loan.setUser(user);
         loan.setBorrowDate(LocalDate.now());
-        loan.setDueDate(LocalDate.now().plusDays(request.getDays() != null ? request.getDays() : 14));
+        int days = request.getDays() != null ? request.getDays() : 14;
+        RentalPricing.periodsFor(days);
+        loan.setDueDate(LocalDate.now().plusDays(days));
         loan.setStatus(LoanStatus.BORROWED);
         loan.setFineAmount(BigDecimal.ZERO);
 
@@ -72,12 +74,13 @@ public class LoanService {
             Book book = copyService.lockBook(itemReq.getBookId());
             List<BookCopy> selected = copyService.take(book.getId(), itemReq.getQuantity(), BookCopyStatus.BORROWED);
 
-            BigDecimal rentalFee = book.getRentalPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+            BigDecimal pricePerCopy = RentalPricing.pricePerCopy(book.getRentalPrice(), days);
+            BigDecimal rentalFee = pricePerCopy.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalRentalFee = totalRentalFee.add(rentalFee);
 
             for (BookCopy copy : selected) {
                 LoanItem item = LoanItem.builder().loan(loan).book(book).copy(copy).quantity(1)
-                        .rentalPrice(book.getRentalPrice())
+                        .rentalPrice(pricePerCopy)
                         .build();
                 items.add(item);
             }
