@@ -19,3 +19,5 @@ Mọi API frontend đi qua lib/api.js; Xem lời gọi API bằng tab Network c�
 - npm run test:e2e (Microsoft Edge đã cài, app đang chạy ở 3000). Các thao tác mượn/thu tiền dùng mock API để không sửa database thật.
 - PowerShell `$env:RUN_LIVE_SMOKE='1'; npm run test:e2e` bật thêm 3 ca đăng nhập demo/read-only API thật. Chỉ dùng với database demo local có tài khoản mẫu.
 Chi tiết route/API/thanh toán xem library/docs/FRONTEND_BACKEND_SPLIT.md.
+
+Đăng nhập độc lập: `/login` cho độc giả, `/admin/login` cho admin/thủ thư. Token quản trị lưu ở `library_admin_token`, không dùng chung `library_token` của độc giả. Đăng xuất một bên giữ phiên bên còn lại.
