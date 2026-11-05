@@ -49,6 +49,8 @@ public class BookService {
         Book book = Book.builder()
                 .title(req.getTitle())
                 .isbn(req.getIsbn())
+                .coverImageUrl(req.getCoverImageUrl())
+                .description(req.getDescription())
                 .category(category)
                 .author(author)
                 .publisher(publisher)
@@ -63,4 +65,15 @@ public class BookService {
         copyService.initialize(saved.getId());
         return saved;
     }
+    @Transactional
+    public Book updateBook(Long id, BookCreateRequest req) {
+        Book book=copyService.lockBook(id);
+        book.setTitle(req.getTitle().trim());book.setIsbn(req.getIsbn());book.setDescription(req.getDescription());
+        book.setCoverImageUrl(req.getCoverImageUrl());book.setRentalPrice(req.getRentalPrice());book.setSalePrice(req.getSalePrice());
+        book.setCategory(req.getCategoryId()==null?null:categoryRepository.findById(req.getCategoryId()).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy thể loại")));
+        book.setAuthor(req.getAuthorId()==null?null:authorRepository.findById(req.getAuthorId()).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy tác giả")));
+        book.setPublisher(req.getPublisherId()==null?null:publisherRepository.findById(req.getPublisherId()).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy nhà xuất bản")));
+        return bookRepository.save(book);
+    }
+
 }

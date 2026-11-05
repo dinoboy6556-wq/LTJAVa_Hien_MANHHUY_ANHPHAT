@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -18,6 +19,7 @@ public class LoanController {
     private LoanService loanService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     public ResponseEntity<List<Loan>> getAllLoans() {
         return ResponseEntity.ok(loanService.getAllLoans());
     }
@@ -33,8 +35,23 @@ public class LoanController {
     }
 
     @PostMapping("/{id}/return")
+    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     public ResponseEntity<Loan> returnLoan(@PathVariable Long id,
                                            @RequestBody(required = false) LoanReturnRequest request) {
         return ResponseEntity.ok(loanService.returnLoan(id, request));
+    }
+
+    @PostMapping("/{id}/my-return")
+    public ResponseEntity<Loan> returnMyLoan(@PathVariable Long id,
+            @RequestBody(required = false) LoanReturnRequest request) {
+        return ResponseEntity.ok(loanService.returnMyLoan(id, request));
+    }
+
+    public record RenewalRequest(@jakarta.validation.constraints.NotNull
+            @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(7) Integer days) {}
+
+    @PostMapping("/{id}/renew")
+    public ResponseEntity<Loan> renewLoan(@PathVariable Long id, @Valid @RequestBody(required = false) RenewalRequest request) {
+        return ResponseEntity.ok(loanService.renewLoan(id, request == null ? 7 : request.days()));
     }
 }

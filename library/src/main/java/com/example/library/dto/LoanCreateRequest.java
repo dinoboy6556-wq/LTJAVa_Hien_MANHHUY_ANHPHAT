@@ -10,7 +10,7 @@ import java.util.List;
 @Data
 public class LoanCreateRequest {
     @NotEmpty
-    private List<@Valid LoanItemRequest> items;
+    private List<@NotNull @Valid LoanItemRequest> items;
 
     @NotNull @Min(1)
     private Integer days = 14;

@@ -1,44 +1,23 @@
-# Giao diện người dùng thư viện Mộc (React + Vite)
+# Mộc — frontend độc giả Next.js
 
-Frontend này được bổ sung riêng cho độc giả. Giao diện quản trị HTML hiện có trong Spring Boot không bị xóa hoặc thay thế.
+## Chạy
+Node.js >=20.9. Bật MySQL Laragon và Spring Boot cổng 8080.
+Trong frontend: `npm install`, `npm run dev`. Mở http://localhost:3000.
+Production local: `npm run build`, `npm start`.
+SPRING_API_URL cấu hình backend proxy (mặc định http://localhost:8080).
 
-## Yêu cầu
-- Node.js 18 trở lên (khuyến nghị Node.js 20+)
-- Backend Spring Boot chạy tại `http://localhost:8080`
+## Phân tách
+Next.js dựng tất cả trang độc giả. Spring Boot cung cấp REST API và dựng trang quản trị Thymeleaf tại /admin (Next proxy cùng origin).
+Không còn trang độc giả Thymeleaf; /user/... cũ chỉ redirect sang route Next.
+Danh sách trang: /, /books, /books/{id}, /login, /register, /cart, /account/profile, /account/favorites, /account/loans, /account/history, /library, /read/{slug}.
+Mọi API frontend đi qua lib/api.js; Xem lời gọi API bằng tab Network của trình duyệt.
 
-## Cài đặt và chạy
-Mở terminal tại thư mục `frontend` rồi chạy:
+## Kiểm thử
+- npm run lint
+- npm run build
+- node --test tests/cart.test.mjs
+- npm run test:e2e (Microsoft Edge đã cài, app đang chạy ở 3000). Các thao tác mượn/thu tiền dùng mock API để không sửa database thật.
+- PowerShell `$env:RUN_LIVE_SMOKE='1'; npm run test:e2e` bật thêm 3 ca đăng nhập demo/read-only API thật. Chỉ dùng với database demo local có tài khoản mẫu.
+Chi tiết route/API/thanh toán xem library/docs/FRONTEND_BACKEND_SPLIT.md.
 
-```bash
-npm install
-npm run dev
-```
-
-Mở `http://localhost:5173`.
-
-## Các trang
-- `/` — Trang chủ
-- `/sach` — Danh sách, tìm kiếm và lọc sách
-- `/sach/:id` — Chi tiết sách
-- `/dang-nhap` — Đăng nhập bằng API JWT hiện có
-- `/dang-ky` — Đăng ký độc giả
-- `/tai-khoan/sach-dang-muon` — Phiếu mượn hiện tại
-- `/tai-khoan/lich-su` — Lịch sử mượn/trả
-
-## Kết nối API
-`vite.config.js` chuyển tiếp `/api` sang `http://localhost:8080`. Token JWT được thêm vào `Authorization: Bearer ...` tự động trong `src/api.js`.
-
-API được sử dụng:
-- `POST /api/v1/auth/login`
-- `POST /api/v1/auth/register`
-- `GET /api/v1/books`
-- `GET /api/v1/books/{id}`
-- `GET /api/v1/categories`
-- `GET /api/v1/loans/my-loans`
-
-Để khách chưa đăng nhập có thể xem danh mục sách, `SecurityConfig` được cập nhật để cho phép GET công khai với sách, danh mục và tác giả. Các thao tác còn lại vẫn theo quy tắc bảo vệ hiện tại.
-
-## Lưu ý
-- Frontend không tự tạo dữ liệu sách giả; dữ liệu hiển thị lấy từ Spring Boot.
-- Backend hiện chưa cung cấp API mô tả dài/ảnh bìa sách, vì vậy giao diện dùng bìa minh họa CSS và thông tin mô tả chung ở trang chi tiết.
-- Tính năng mượn trực tuyến chưa được bật; trang người dùng hiển thị phiếu mượn từ API hiện có và hướng dẫn liên hệ thủ thư để mượn sách.
+Đăng nhập độc lập: `/login` cho độc giả, `/admin/login` cho admin/thủ thư. Token quản trị lưu ở `library_admin_token`, không dùng chung `library_token` của độc giả. Đăng xuất một bên giữ phiên bên còn lại.

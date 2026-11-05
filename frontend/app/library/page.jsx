@@ -1,0 +1,3 @@
+ 'use client';
+import Link from 'next/link';import {api} from '../../lib/api';import {useAccount,AccountState} from '../../components/account-data';
+export default function Library(){const {data,error}=useAccount(api.content);return <main className="container utility-page"><h1>Đọc online & tin thư viện</h1><AccountState data={data} error={error}/>{data?.length===0&&<p>Chưa có nội dung xuất bản.</p>}<div className="book-grid">{data?.map(c=><article className="book-card utility-card" key={c.id}><small>{({EBOOK:'Sách điện tử',POST:'Tin thư viện',PAGE:'Thông tin'})[c.kind]}</small><h2>{c.title}</h2><Link className="primary-button" href={'/read/'+c.slug}>Đọc nội dung</Link></article>)}</div></main>;}

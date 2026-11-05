@@ -21,6 +21,12 @@ public class Book {
 
     private String isbn;
 
+    @Column(name = "cover_image_url", length = 1000)
+    private String coverImageUrl;
+
+    @Column(length = 4000)
+    private String description;
+
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;

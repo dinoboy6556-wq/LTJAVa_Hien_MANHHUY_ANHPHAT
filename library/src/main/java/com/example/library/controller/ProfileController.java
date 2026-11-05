@@ -20,7 +20,7 @@ public class ProfileController {
         this.users = users;
     }
 
-    public record ProfileResponse(String fullName, String email, String phone, String address) {}
+    public record ProfileResponse(String fullName, String email, String phone, String address, java.util.List<String> roles) {}
 
     public record ProfileUpdate(
             @NotBlank @Size(max = 255) String fullName,
@@ -33,10 +33,12 @@ public class ProfileController {
     }
 
     private ProfileResponse response(User user) {
-        return new ProfileResponse(user.getFullName(), user.getEmail(), user.getPhone(), user.getAddress());
+        return new ProfileResponse(user.getFullName(), user.getEmail(), user.getPhone(), user.getAddress(),
+                user.getRoles().stream().map(role -> role.getName().name()).sorted().toList());
     }
 
     @GetMapping
+    @Transactional(readOnly = true)
     public ProfileResponse get(Authentication authentication) {
         return response(currentUser(authentication));
     }

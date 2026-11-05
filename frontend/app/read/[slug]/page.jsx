@@ -1,0 +1,3 @@
+ 'use client';
+import {useCallback} from 'react';import {useParams} from 'next/navigation';import Link from 'next/link';import {api} from '../../../lib/api';import {useAccount,AccountState} from '../../../components/account-data';
+export default function Read(){const {slug}=useParams(),loader=useCallback(()=>api.read(slug),[slug]);const {data,error}=useAccount(loader);return <main className="container utility-page"><Link href="/library">← Thư viện online</Link><AccountState data={data} error={error}/>{data&&<article className="reading-text"><h1>{data.title}</h1><div>{data.body}</div></article>}</main>;}

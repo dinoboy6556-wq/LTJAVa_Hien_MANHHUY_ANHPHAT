@@ -26,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ProfileIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired UserRepository users;
+    @Autowired com.example.library.repository.RoleRepository roles;
 
     @BeforeEach
     void createUser() {
@@ -61,6 +62,24 @@ class ProfileIntegrationTest {
         assertEquals("private-password", saved.getPassword());
         assertTrue(saved.getRoles().isEmpty());
         mvc.perform(get("/api/v1/profile")).andExpect(jsonPath("$.address").value("New address"));
+    }
+
+    @Test
+    @WithMockUser(username = "profile@example.com", roles = "ADMIN")
+    void adminRolesSurviveProfileReadAndUpdate() throws Exception {
+        var role = roles.findByName(com.example.library.entity.RoleName.ROLE_ADMIN)
+                .orElseGet(() -> roles.save(com.example.library.entity.Role.builder()
+                        .name(com.example.library.entity.RoleName.ROLE_ADMIN).build()));
+        User user = users.findByEmail("profile@example.com").orElseThrow();
+        user.getRoles().add(role);
+        users.save(user);
+        mvc.perform(get("/api/v1/profile")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.roles[0]").value("ROLE_ADMIN"));
+        mvc.perform(put("/api/v1/profile").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fullName\":\"Admin Updated\",\"roles\":[]}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.roles[0]").value("ROLE_ADMIN"));
+        mvc.perform(get("/api/v1/profile"))
+                .andExpect(jsonPath("$.roles[0]").value("ROLE_ADMIN"));
     }
 
     @Test

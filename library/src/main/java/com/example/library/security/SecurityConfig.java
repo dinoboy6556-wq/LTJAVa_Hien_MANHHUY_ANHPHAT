@@ -42,6 +42,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn", "/api/v1/content/public", "/api/v1/content/catalog", "/api/v1/content/read/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/**", "/api/v1/categories/**", "/api/v1/authors/**").permitAll()
                         .requestMatchers(
                                 "/",
@@ -51,6 +52,8 @@ public class SecurityConfig {
                                 "/js/**",
                                 "/images/**",
                                 "/user/**",
+                                "/admin",
+                                "/admin/login",
                                 "/api/v1/auth/**",
                                 "/h2-console/**",
                                 "/*.css",

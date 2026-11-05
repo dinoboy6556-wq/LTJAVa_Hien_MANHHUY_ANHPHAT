@@ -11,6 +11,8 @@ public class BookCreateRequest {
     @NotBlank
     private String title;
     private String isbn;
+    private String coverImageUrl;
+    private String description;
     private Long categoryId;
     private Long authorId;
     private Long publisherId;
@@ -19,8 +21,10 @@ public class BookCreateRequest {
     private Integer totalQuantity;
 
     @NotNull
+    @jakarta.validation.constraints.DecimalMin("0")
     private BigDecimal rentalPrice;
 
     @NotNull
+    @jakarta.validation.constraints.DecimalMin("0")
     private BigDecimal salePrice;
 }

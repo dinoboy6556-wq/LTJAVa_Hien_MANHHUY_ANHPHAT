@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/v1/categories")
@@ -20,7 +21,16 @@ public class CategoryController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
     public ResponseEntity<Category> create(@RequestBody Category category) {
         return ResponseEntity.ok(categoryService.create(category));
+    }
+    @Autowired private com.example.library.repository.CategoryRepository repository;
+    @PutMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','LIBRARIAN')")
+    public Category update(@PathVariable Long id,@RequestBody Category input) {
+        if(input.getName()==null||input.getName().isBlank()||input.getName().length()>255)throw new IllegalArgumentException("Tên không hợp lệ");
+        var item=repository.findById(id).orElseThrow(()->new com.example.library.exception.ResourceNotFoundException("Không tìm thấy dữ liệu"));
+        item.setName(input.getName().trim());item.setDescription(input.getDescription());
+        return repository.save(item);
     }
 }

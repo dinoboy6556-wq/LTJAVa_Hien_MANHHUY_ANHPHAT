@@ -35,6 +35,8 @@ public class LoanService {
     @Autowired
     private FineRepository fineRepository;
 
+    @Autowired private ReservationRepository reservations;
+
     public List<Loan> getAllLoans() {
         return loanRepository.findAll();
     }
@@ -48,7 +50,11 @@ public class LoanService {
 
     @Transactional
     public Loan createLoan(LoanCreateRequest request) {
-        String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        return createForUser(request, SecurityContextHolder.getContext().getAuthentication().getName());
+    }
+
+    @Transactional
+    public Loan createForUser(LoanCreateRequest request, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user"));
 
@@ -77,6 +83,9 @@ public class LoanService {
             }
         }
 
+        for (Long bookId : request.getItems().stream().map(LoanItemRequest::getBookId).distinct().toList()) {
+            reservations.findByUser_EmailAndBook_Id(userEmail, bookId).ifPresent(reservations::delete);
+        }
         loan.setRentalFee(totalRentalFee);
         loan.setItems(items);
 
@@ -102,25 +111,31 @@ public class LoanService {
         BookReturnCondition condition = request == null || request.getCondition() == null
                 ? BookReturnCondition.NORMAL : request.getCondition();
 
+        List<LoanItem> remaining = loan.getItems().stream().filter(i -> i.getReturnedAt() == null).toList();
+        List<Long> ids = request == null ? null : request.getItemIds();
+        if (ids != null && (ids.isEmpty() || ids.stream().anyMatch(java.util.Objects::isNull)
+                || new java.util.HashSet<>(ids).size() != ids.size()
+                || ids.stream().anyMatch(id -> remaining.stream().noneMatch(i -> id.equals(i.getId())))))
+            throw new IllegalArgumentException("Danh sách quyển trả không hợp lệ hoặc đã trả trước đó");
+        List<LoanItem> selected = ids == null ? remaining : remaining.stream().filter(i -> ids.contains(i.getId())).toList();
+        if (selected.isEmpty()) throw new IllegalStateException("Không còn quyển nào cần trả");
         LocalDate today = LocalDate.now();
-        loan.setReturnDate(today);
-        loan.setStatus(LoanStatus.RETURNED);
 
         long overdueDays = Math.max(0, ChronoUnit.DAYS.between(loan.getDueDate(), today));
-        int totalBooks = loan.getItems().stream().mapToInt(LoanItem::getQuantity).sum();
+        int totalBooks = selected.stream().mapToInt(LoanItem::getQuantity).sum();
         BigDecimal overdueFine = BigDecimal.valueOf(overdueDays * 10000L * totalBooks);
         BigDecimal conditionFine = BigDecimal.ZERO;
 
         if (condition == BookReturnCondition.DAMAGED) {
             conditionFine = BigDecimal.valueOf(50000L * totalBooks);
         } else if (condition == BookReturnCondition.LOST) {
-            conditionFine = loan.getItems().stream()
+            conditionFine = selected.stream()
                     .map(item -> item.getBook().getSalePrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
 
         BigDecimal totalFine = overdueFine.add(conditionFine);
-        loan.setFineAmount(totalFine);
+        loan.setFineAmount((loan.getFineAmount() == null ? BigDecimal.ZERO : loan.getFineAmount()).add(totalFine));
 
         if (totalFine.compareTo(BigDecimal.ZERO) > 0) {
             String reason = "Phạt trả quá hạn: " + overdueDays + " ngày";
@@ -132,9 +147,49 @@ public class LoanService {
             fineRepository.save(Fine.builder().loan(loan).amount(totalFine).reason(reason).paid(false).build());
         }
 
-        for (LoanItem item : loan.getItems().stream().sorted(java.util.Comparator.comparing(i -> i.getBook().getId())).toList()) {
+        for (LoanItem item : selected.stream().sorted(java.util.Comparator.comparing(i -> i.getBook().getId())).toList()) {
             copyService.returnCopy(item, condition);
+            item.setReturnedAt(today);
+            item.setReturnCondition(condition);
         }
+        if (loan.getItems().stream().allMatch(i -> i.getReturnedAt() != null)) {
+            loan.setReturnDate(today);
+            loan.setStatus(LoanStatus.RETURNED);
+        }
+        return loanRepository.save(loan);
+    }
+
+    @Transactional
+    public Loan returnMyLoan(Long loanId, LoanReturnRequest request) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Loan loan = loanRepository.findForUpdate(loanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mượn"));
+        if (loan.getUser() == null || !email.equals(loan.getUser().getEmail()))
+            throw new org.springframework.security.access.AccessDeniedException("Bạn chỉ có thể trả sách của chính mình");
+        return returnLoan(loanId, request);
+    }
+
+    @Transactional
+    public Loan renewLoan(Long loanId) {
+        return renewLoan(loanId, 7);
+    }
+
+    @Transactional
+    public Loan renewLoan(Long loanId, int days) {
+        if (days < 1 || days > 7) throw new IllegalArgumentException("Chọn từ 1 đến 7 ngày gia hạn");
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Loan loan = loanRepository.findForUpdate(loanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mượn ID: " + loanId));
+        if (loan.getUser() == null || !email.equals(loan.getUser().getEmail()))
+            throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền gia hạn phiếu mượn này");
+        if (loan.getStatus() != LoanStatus.BORROWED || loan.getDueDate().isBefore(LocalDate.now()))
+            throw new IllegalStateException("Chỉ có thể gia hạn phiếu đang mượn và chưa quá hạn");
+        if (loan.getRenewalCount() != null && loan.getRenewalCount() >= 1)
+            throw new IllegalStateException("Mỗi phiếu chỉ được gia hạn một lần");
+        if (fineRepository.findByLoan(loan).stream().anyMatch(fine -> !Boolean.TRUE.equals(fine.getPaid())))
+            throw new IllegalStateException("Hãy thanh toán khoản phạt trước khi gia hạn");
+        loan.setDueDate(loan.getDueDate().plusDays(days));
+        loan.setRenewalCount((loan.getRenewalCount() == null ? 0 : loan.getRenewalCount()) + 1);
         return loanRepository.save(loan);
     }
 }

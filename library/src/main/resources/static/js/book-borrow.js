@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
       message.textContent = 'Số lượng và số ngày mượn phải là số nguyên dương.';
       return;
     }
+    if (!window.confirm(`Xác nhận mượn ${quantity} quyển trong ${days} ngày?`)) return;
     busy = true;
     button.disabled = true;
     message.classList.remove('success');
