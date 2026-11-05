@@ -40,8 +40,10 @@ export const api = {
   read: (slug) => apiRequest('/content/read/'+encodeURIComponent(slug)),
   siteContent: () => apiRequest('/content/public'),
   profile: () => apiRequest('/profile'),
+  updateAvatar: (avatarData) => apiRequest('/profile/avatar', { method: 'PUT', body: JSON.stringify({ avatarData }) }),
   homeSelections: () => apiRequest('/books/home-selections'),
   books: () => apiRequest('/books'),
+  bookRatings: () => apiRequest('/books/ratings'),
   book: (id) => apiRequest('/books/' + id),
   relatedBooks: (id) => apiRequest('/books/' + id + '/related'),
   categories: () => apiRequest('/categories'),
@@ -54,6 +56,8 @@ export const api = {
   unfavorite: (id) => apiRequest('/favorites/' + id, { method: 'DELETE' }),
   reviews: (id) => apiRequest('/books/' + id + '/reviews'),
   saveReview: (id, body) => apiRequest('/books/' + id + '/reviews', { method: 'PUT', body: JSON.stringify(body) }),
+  reactions: (id) => apiRequest('/books/' + id + '/reactions'),
+  react: (id, reaction) => apiRequest('/books/' + id + '/reactions', { method: 'PUT', body: JSON.stringify({ reaction }) }),
   stats: () => apiRequest('/statistics/summary'),
 };
 

@@ -20,7 +20,7 @@ public class BorrowCheckoutService {
   for(var entry:counts.entrySet()){var book=books.findForUpdate(entry.getKey()).orElseThrow(()->new IllegalArgumentException("Sách không còn tồn tại"));
    if(copies.countByBookIdAndStatus(book.getId(),BookCopyStatus.AVAILABLE)<entry.getValue())throw new IllegalStateException("Không đủ quyển: "+book.getTitle());
    if(book.getRentalPrice()==null||book.getRentalPrice().signum()<0)throw new IllegalStateException("Phí sách không hợp lệ");
-   total=total.add(book.getRentalPrice().multiply(BigDecimal.valueOf(entry.getValue())));
+   total=total.add(RentalPricing.pricePerCopy(book.getRentalPrice(),request.getDays()).multiply(BigDecimal.valueOf(entry.getValue())));
   }return total;
  }
  @Transactional public Map<String,Object> checkout(String email,LoanCreateRequest request,String key,String ip){
