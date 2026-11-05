@@ -22,7 +22,7 @@
 | /library, /read/{slug} | GET /content/catalog, /content/read/{slug} |
 
 API frontend tập trung tại frontend/lib/api.js, mọi request dùng /api/v1 và Bearer token. Các thành phần React không truy cập database. Đã bỏ bảng API LIVE khỏi giao diện khách hàng; xem request tại DevTools > Network.
-Token library_token, hồ sơ library_user; khôi phục token cũ cùng origin nếu còn libraryToken. Không chuyển token qua URL. Huy hiệu giỏ đếm tổng quyển, lưu giỏ theo email và cập nhật tức thì.
+Phiên độc giả: library_token/library_user. Phiên quản trị: library_admin_token/library_admin_profile. Hai phiên đăng nhập/đăng xuất độc lập, không tự lấy token từ bên còn lại. Các khóa legacy libraryToken/libraryProfile không được tự nhập vào phiên mới. Không chuyển token qua URL. Huy hiệu giỏ đếm tổng quyển, lưu giỏ theo email và cập nhật tức thì.
 
 ## Thanh toán
 - CASH tạo phiếu và ghi UNPAID, admin xác nhận thu tiền. Tạo lại cùng mã yêu cầu không sinh phiếu thứ hai.
@@ -41,3 +41,6 @@ Kiểm thử trình duyệt dùng API fixtures có kiểm tra request/payload đ
 Các script user.js/cart.js/... cũ trong static chỉ là mã tương thích chưa được tải bởi trang độc giả mới; user.css vẫn dùng cho admin. Tài liệu lịch sử đề cập trang Thymeleaf độc giả không còn áp dụng.
 
 Kết quả kiểm tra đợt chuyển: 64 ca backend H2; 14 ca trình duyệt (11 fixture + 3 login/read-only với API thật); 4 ca unit giỏ. Lint và production build đều được kiểm tra. VNPay ngân hàng đầu cuối chưa xác minh vì chưa cấu hình merchant/IPN public.
+
+## Tách phiên 05/11/2026
+Dùng /login cho độc giả, /admin/login cho admin/thủ thư. Kể cả cùng trình duyệt và cổng 3000, hai bên có token riêng; không chia sẻ đăng nhập. Lần đầu sau cập nhật, admin cần đăng nhập lại. Phân quyền API giữ nguyên, chỉ admin/thủ thư có quyền vào quản trị. Không thêm bảng database.

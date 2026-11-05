@@ -16,7 +16,7 @@ export async function apiRequest(path, options = {}) {
     let data = null;
     if (text) { try { data = JSON.parse(text); } catch { data = text; } }
 
-    if(response.status===401){['library_token','library_user','libraryToken','libraryProfile'].forEach(k=>localStorage.removeItem(k));window.dispatchEvent(new Event('moc:session'));}
+    if(response.status===401){['library_token','library_user'].forEach(k=>localStorage.removeItem(k));window.dispatchEvent(new Event('moc:session'));}
     if (!response.ok) throw new Error(data?.message || data?.error || (typeof data === 'string' ? data : 'API trả về HTTP ' + response.status));
     return data;
   } catch (error) {
