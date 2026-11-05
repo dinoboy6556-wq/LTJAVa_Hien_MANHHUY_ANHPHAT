@@ -3,18 +3,18 @@
 ## Cấu trúc hiện tại
 - frontend/: toàn bộ trang độc giả Next.js.
 - library/: REST API, nghiệp vụ, database và trang admin Thymeleaf. Đã bỏ templates/user và controller dựng trang độc giả.
-- Cổng truy cập: http://localhost:3000. Admin: http://localhost:3000/admin. Next chuyển tiếp /admin, /css, /js và /api sang Spring 8080.
+- Cổng truy cập: http://localhost:3000. Admin: http://localhost:3000/admin. Next chuyển tiếp /admin, /images, /css, /js và /api sang Spring 8080.
 - URL /user/... cũ chuyển hướng tới route Next tương ứng (giữ query, bao gồm Return URL cũ của VNPay).
 - Khi truy cập trực tiếp Spring 8080, FRONTEND_URL cấu hình địa chỉ Next (mặc định http://localhost:3000). Admin trực tiếp 8080 có thể cần đăng nhập riêng vì khác origin.
 
 ## Trang độc giả và API
 | Trang | API chính |
 |---|---|
-| /, /books, /books/{id} | GET /api/v1/books, /books/{id}, /books/{id}/related |
+| /, /books, /books/{id} | GET /api/v1/books/home-selections, /books/catalog, /books/{id}, /books/{id}/related |
 | /login, /register | POST /auth/login, /auth/register |
 | /account/profile | GET/PUT /profile |
 | /account/favorites | GET /favorites, PUT/DELETE /favorites/{bookId} |
-| /cart | GET /payments/my, POST /payments/cash hoặc /payments/checkout |
+| /cart | GET /payments/my, POST /payments/cash hoặc /payments/payos/checkout; POST /payments/payos/{id}/sync hoặc /resume |
 | /account/loans | GET /loans/my-loans, POST /loans/{id}/my-return và /renew |
 | /account/history | GET /loans/my-loans, chỉ hiển thị RETURNED |
 | /account/loans | GET /notifications, /reservations, /fines/my-fines |
@@ -25,6 +25,7 @@ API frontend tập trung tại frontend/lib/api.js, mọi request dùng /api/v1 
 Phiên độc giả: library_token/library_user. Phiên quản trị: library_admin_token/library_admin_profile. Hai phiên đăng nhập/đăng xuất độc lập, không tự lấy token từ bên còn lại. Các khóa legacy libraryToken/libraryProfile không được tự nhập vào phiên mới. Không chuyển token qua URL. Huy hiệu giỏ đếm tổng quyển, lưu giỏ theo email và cập nhật tức thì.
 
 ## Thanh toán
+- Phương thức mới trên giao diện **Chuyển khoản ngân hàng** dùng PAYOS: cấu hình PAYOS_CLIENT_ID/PAYOS_API_KEY/PAYOS_CHECKSUM_KEY và webhook /api/v1/payments/payos/webhook; xem PAYOS_BANK_TRANSFER.md. Các dòng VNPay bên dưới chỉ áp dụng giao dịch cũ để tương thích.
 - CASH tạo phiếu và ghi UNPAID, admin xác nhận thu tiền. Tạo lại cùng mã yêu cầu không sinh phiếu thứ hai.
 - VNPAY chỉ tạo phiếu khi IPN đã xác thực; trang quay về /cart lấy kết quả từ API. Không tin query kết quả trong trình duyệt.
 - Cấu hình VNPAY_RETURN_URL=http://localhost:3000/cart hoặc domain Next thực tế. Đăng ký IPN công khai /api/v1/payments/vnpay/ipn với VNPay. Chưa có credentials/public IPN thì không thể thử thanh toán ngân hàng đầu cuối; trang báo rõ thiếu cấu hình.

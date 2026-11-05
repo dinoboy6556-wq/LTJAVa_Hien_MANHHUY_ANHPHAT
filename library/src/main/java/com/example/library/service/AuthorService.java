@@ -16,6 +16,7 @@ public class AuthorService {
     }
 
     public Author create(Author author) {
+        author.setId(null);author.setName(author.getName().trim());
         return authorRepository.save(author);
     }
 }

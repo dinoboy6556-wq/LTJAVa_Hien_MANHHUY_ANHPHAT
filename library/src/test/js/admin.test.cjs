@@ -1,14 +1,25 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const source=fs.readFileSync(path.join(__dirname,'../../main/resources/static/js/admin.js'),'utf8');
-class Element{constructor(){this.children=[];this.events={};this.dataset={};this.style={};this.value='';this.textContent='';this.attributes={};}append(...nodes){this.children.push(...nodes);}replaceChildren(...nodes){this.children=nodes;}addEventListener(k,f){this.events[k]=f;}setAttribute(k,v){this.attributes[k]=v;}removeAttribute(k){delete this.attributes[k];}showModal(){this.open=true;}close(){this.open=false;}}
+class Element{
+ constructor(tag='div'){this.tagName=tag;this.children=[];this.events={};this.dataset={};this.style={};this.value='';this.textContent='';this.attributes={};this.className='';this.classList={add:(...names)=>{this.className=[...new Set([...this.className.split(' ').filter(Boolean),...names])].join(' ');}};}
+ append(...nodes){this.children.push(...nodes);}
+ replaceChildren(...nodes){this.children=nodes;this.textContent='';}
+ addEventListener(k,f){this.events[k]=f;}
+ setAttribute(k,v){this.attributes[k]=v;}
+ removeAttribute(k){delete this.attributes[k];}
+ querySelectorAll(selector){const tags=selector.split(',');const found=[];for(const child of this.children){if(!(child instanceof Element))continue;if(tags.includes(child.tagName))found.push(child);found.push(...child.querySelectorAll(selector));}return found;}
+ showModal(){this.open=true;}
+ close(){this.open=false;}
+}
+
 function setup(roles=['ROLE_ADMIN'], loans=[],copyStatus='BORROWED'){const nodes=new Map(),calls=[];const get=id=>{if(!nodes.has(id))nodes.set(id,new Element());return nodes.get(id);};const books=Array.from({length:12},(_,i)=>({id:i+1,title:`Book ${i+1}`,availableQuantity:i%2,totalQuantity:1}));
- vm.runInNewContext(source,{document:{getElementById:get,createElement:()=>new Element(),addEventListener:(_,f)=>f(),querySelectorAll:selector=>selector==='[data-section]'?get('adminNav').children:[]},localStorage:{getItem:()=> 'token',removeItem(){}},location:{},confirm:()=>true,setTimeout,URL,fetch:async(url,options)=>{calls.push({url,options});return {status:200,ok:true,json:async()=>url.endsWith('/profile')?{roles,fullName:'Admin',email:'admin@test'}:url.endsWith('/summary')?{totalBooks:12}:url.endsWith('/books')?books:url.endsWith('/copies')?[{id:91,code:'COPY-91',status:copyStatus}]:url.endsWith('/loans')?loans:[]};}});return {get,calls};}
+ vm.runInNewContext(source,{Node:Element,FormData,document:{getElementById:get,createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag),addEventListener:(_,f)=>f(),querySelectorAll:selector=>selector==='[data-section]'?get('adminNav').children:[]},localStorage:{getItem:()=> 'token',removeItem(){}},location:{},confirm:()=>true,setTimeout,URL,fetch:async(url,options)=>{calls.push({url,options});return {status:200,ok:true,json:async()=>url.endsWith('/profile')?{roles,fullName:'Admin',email:'admin@test'}:url.endsWith('/summary')?{totalBooks:12}:url.endsWith('/books')?books:url.endsWith('/copies')?[{id:91,code:'COPY-91',status:copyStatus}]:url.endsWith('/loans')?loans:[]};}});return {get,calls};}
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 test('admin navigation loads, filters and paginates inventory',async()=>{const app=setup();await flush();assert.equal(app.get('adminNav').children.length,16);app.get('adminNav').children.find(b=>b.dataset.section==='books').events.click();await flush();assert.equal(app.get('adminRows').children.length,10);app.get('adminNext').events.click();assert.equal(app.get('adminRows').children.length,2);app.get('adminSearch').value='Book 12';app.get('adminSearch').events.input();assert.equal(app.get('adminRows').children.length,1);assert.match(app.get('adminPage').textContent,/1 kết quả/);});
 test('reader cannot initialize management sections',async()=>{const app=setup(['ROLE_USER']);await flush();assert.equal(app.get('adminNav').children.length,0);assert.match(app.get('adminMessage').textContent,/không có quyền/);assert.equal(app.calls.length,1);});
 test('librarian has operations but no user management',async()=>{const app=setup(['ROLE_LIBRARIAN']);await flush();assert.equal(app.get('adminNav').children.some(b=>b.dataset.section==='users'),false);assert.equal(app.get('adminNav').children.some(b=>b.dataset.section==='loans'),true);});
 
-async function openBorrowedCopy(app){await flush();app.get('adminNav').children.find(b=>b.dataset.section==='books').events.click();await flush();await app.get('adminRows').children[0].children[7].children[0].children[0].events.click();return app.get('dialogBody').children[1].children[2];}
+async function openBorrowedCopy(app){await flush();app.get('adminNav').children.find(b=>b.dataset.section==='books').events.click();await flush();await app.get('adminRows').children[0].querySelectorAll('button').find(b=>b.attributes['aria-label']==='Từng quyển / nhập sách').events.click();return app.get('dialogBody').children[1].children[2];}
 test('borrowed copy opens matching active loan without mutating inventory',async()=>{
  const app=setup(['ROLE_ADMIN'],[{id:42,status:'BORROWED',items:[{copy:{id:91,code:'COPY-91'},book:{title:'Book'}}]}]);
  const button=await openBorrowedCopy(app);await button.events.click();
@@ -34,7 +45,7 @@ test('loan table groups copies by book id and separates borrowing and due dates'
 test('saving inventory status keeps dialog and selected state open',async()=>{
  const app=setup(['ROLE_ADMIN'],[],'AVAILABLE');await flush();
  app.get('adminNav').children.find(b=>b.dataset.section==='books').events.click();await flush();
- await app.get('adminRows').children[0].children[7].children[0].children[0].events.click();
+ await app.get('adminRows').children[0].querySelectorAll('button').find(b=>b.attributes['aria-label']==='Từng quyển / nhập sách').events.click();
  const row=app.get('dialogBody').children[1];const select=row.children[1].children[0];select.value='DAMAGED';
  await row.children[2].events.click();assert.equal(app.get('adminDialog').open,true);assert.equal(select.value,'DAMAGED');
  assert.match(app.get('dialogMessage').textContent,/Đã lưu COPY-91/);
@@ -45,11 +56,18 @@ test('librarian can update available copy status through inventory',async()=>{
  const app=setup(['ROLE_LIBRARIAN'],[],'AVAILABLE');await flush();
  assert.equal(app.get('adminNav').children.some(b=>['users','payments'].includes(b.dataset.section)),false);
  app.get('adminNav').children.find(b=>b.dataset.section==='books').events.click();await flush();
- await app.get('adminRows').children[0].children[7].children[0].children[0].events.click();
+ await app.get('adminRows').children[0].querySelectorAll('button').find(b=>b.attributes['aria-label']==='Từng quyển / nhập sách').events.click();
  const row=app.get('dialogBody').children[1];row.children[1].children[0].value='DAMAGED';await row.children[2].events.click();
  assert.ok(app.calls.some(call=>call.options?.method==='PATCH'));assert.equal(app.get('adminDialog').open,true);
 });
 
 test('reports is always the final management tab for admin and librarian',async()=>{
  for(const role of ['ROLE_ADMIN','ROLE_LIBRARIAN']){const app=setup([role]);await flush();assert.equal(app.get('adminNav').children.at(-1).dataset.section,'reports');}
+});
+
+test('inventory row shows cover column and icon actions retain accessible labels',async()=>{
+ const app=setup();await flush();app.get('adminNav').children.find(b=>b.dataset.section==='books').events.click();await flush();
+ assert.equal(app.get('adminHead').children[0].children[0].textContent,'Ảnh bìa');
+ const buttons=app.get('adminRows').children[0].querySelectorAll('button');assert.equal(buttons.length,3);
+ for(const label of ['Từng quyển / nhập sách','Sửa đầu sách','Xóa đầu sách']){const button=buttons.find(b=>b.attributes['aria-label']===label);assert.ok(button);assert.equal(button.title,label);assert.equal(button.children[0].tagName,'svg');assert.ok(button.events.click);}
 });

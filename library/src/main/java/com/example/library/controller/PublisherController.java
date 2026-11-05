@@ -22,16 +22,19 @@ public class PublisherController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
-    public ResponseEntity<Publisher> create(@RequestBody Publisher publisher) {
+    public ResponseEntity<Publisher> create(@jakarta.validation.Valid @RequestBody Publisher publisher) {
         return ResponseEntity.ok(publisherService.create(publisher));
     }
     @Autowired private com.example.library.repository.PublisherRepository repository;
     @PutMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','LIBRARIAN')")
-    public Publisher update(@PathVariable Long id,@RequestBody Publisher input) {
+    public Publisher update(@PathVariable Long id,@jakarta.validation.Valid @RequestBody Publisher input) {
         if(input.getName()==null||input.getName().isBlank()||input.getName().length()>255)throw new IllegalArgumentException("Tên không hợp lệ");
         var item=repository.findById(id).orElseThrow(()->new com.example.library.exception.ResourceNotFoundException("Không tìm thấy dữ liệu"));
         item.setName(input.getName().trim());item.setAddress(input.getAddress());
         item.setPhone(input.getPhone());
         return repository.save(item);
     }
+    @Autowired private com.example.library.service.DeletionService deletion;
+    @DeleteMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','LIBRARIAN')")
+    public ResponseEntity<Void> delete(@PathVariable Long id){deletion.deleteRelated("publishers",id);return ResponseEntity.noContent().build();}
 }

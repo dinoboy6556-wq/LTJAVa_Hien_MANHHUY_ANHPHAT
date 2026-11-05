@@ -12,7 +12,9 @@ public class Category {
     private Long id;
 
     @Column(nullable = false, unique = true)
+    @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=255)
     private String name;
 
+    @jakarta.validation.constraints.Size(max=255)
     private String description;
 }

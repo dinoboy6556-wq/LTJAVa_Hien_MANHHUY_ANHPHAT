@@ -23,4 +23,6 @@ public interface BookRepository extends JpaRepository<Book, Long>, org.springfra
 
     @Query("SELECT b FROM Book b LEFT JOIN FETCH b.category LEFT JOIN FETCH b.author LEFT JOIN FETCH b.publisher WHERE b.status = :status")
     List<Book> findBooksByStatusWithDetails(@Param("status") BookStatus status);
+    @Override @org.springframework.data.jpa.repository.EntityGraph(attributePaths={"category","author","publisher"})
+    org.springframework.data.domain.Page<Book> findAll(org.springframework.data.jpa.domain.Specification<Book> spec,org.springframework.data.domain.Pageable pageable);
 }

@@ -17,7 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 public class AuthController {
 
     public record ChangePasswordRequest(@NotBlank String currentPassword,
-                                        @NotBlank @Size(min = 8, max = 128) String newPassword) {}
+                                        @NotBlank @Size(min = 8, max = 72) String newPassword) {}
 
     @Autowired
     private AuthService authService;
