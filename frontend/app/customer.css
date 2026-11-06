@@ -284,12 +284,12 @@ body,button,input,select,textarea{font-family:var(--customer-font);font-size:18p
   text-overflow:ellipsis;
   white-space:nowrap;
 }
-.site-header .main-nav { flex:1; flex-wrap:nowrap; justify-content:center; margin:0; gap:12px; }
+.site-header .main-nav { flex:1; flex-wrap:nowrap; justify-content:center; margin:0; gap:8px; }
 .site-header .main-nav a { font-size:14px; gap:5px; }
 .site-header .header-search { width:clamp(140px, 13vw, 210px); min-width:120px; margin-left:auto; }
 .site-header .header-search input { min-width:0; font-size:14px; }
 .site-header .header-user { gap:10px; }
-.site-header .header-user .user-badge { max-width:145px; font-size:14px; }
+.site-header .header-user .user-badge { max-width:125px; font-size:14px; }
 .site-header .header-user .text-button { font-size:14px; white-space:nowrap; }
 
 @media(max-width:1350px) {

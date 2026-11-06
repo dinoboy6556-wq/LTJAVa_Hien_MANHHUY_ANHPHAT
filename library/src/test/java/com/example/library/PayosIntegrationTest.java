@@ -5,9 +5,10 @@ import org.junit.jupiter.api.*;import org.springframework.beans.factory.annotati
 import java.util.*;import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.*;import static org.mockito.Mockito.*;import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 @SpringBootTest(properties={"spring.datasource.url=jdbc:h2:mem:payos_test;DB_CLOSE_DELAY=-1","spring.datasource.driver-class-name=org.h2.Driver","spring.datasource.username=sa","spring.datasource.password=","spring.jpa.database-platform=org.hibernate.dialect.H2Dialect","spring.jpa.hibernate.ddl-auto=create-drop","app.seed.enabled=false","app.payos.client-id=test-client","app.payos.api-key=test-api","app.payos.checksum-key=1a54716c8f0efb2744fb28b6e38b25da7f67a925d98bc1c18bd8faaecadd7675"})
-@AutoConfigureMockMvc @Transactional
+@AutoConfigureMockMvc @Transactional @org.springframework.test.context.event.RecordApplicationEvents
 class PayosIntegrationTest {
  @Autowired BorrowCheckoutService checkout;@Autowired PayosPaymentService service;@SpyBean PayosGateway gateway;@Autowired UserRepository users;@Autowired BookRepository books;@Autowired BookCopyService inventory;@Autowired BorrowPaymentRepository payments;@Autowired LoanRepository loans;@Autowired ObjectMapper json;@Autowired MockMvc mvc;
+ @Autowired org.springframework.test.context.event.ApplicationEvents events;
  Book book;LoanCreateRequest request;
  @BeforeEach void setup(){users.save(User.builder().email("payer@test.com").fullName("Payer").password("unused").build());book=books.save(Book.builder().title("Java").totalQuantity(2).availableQuantity(2).status(BookStatus.AVAILABLE).rentalPrice(new BigDecimal("10000")).salePrice(new BigDecimal("50000")).build());inventory.initialize(book.getId());var item=new LoanItemRequest();item.setBookId(book.getId());item.setQuantity(2);request=new LoanCreateRequest();request.setPolicyAccepted(true);request.setPolicyVersion(BorrowingPolicy.VERSION);request.setDays(28);request.setItems(List.of(item));}
  BorrowPayment order(){return checkout.preparePayos("payer@test.com",request,"payos-key-12345678");}
@@ -17,7 +18,7 @@ class PayosIntegrationTest {
  {"orderCode":123,"amount":3000,"description":"VQRIO123","accountNumber":"12345678","reference":"TF230204212323","transactionDateTime":"2023-02-04 18:25:00","currency":"VND","paymentLinkId":"124c33293c43417ab7879e14c8d9eb18","code":"00","desc":"Thành công","counterAccountBankId":"","counterAccountBankName":"","counterAccountName":"","counterAccountNumber":"","virtualAccountName":"","virtualAccountNumber":""}
  """);assertEquals("412e915d2871504ed31be63c8f62a149a4410d34c4c42affc9006ef9917eaa03",gateway.sign(d));}
  @Test void retryUsesSameOrderAndCurrentRentalPricing(){var p=order();assertEquals(p.getId(),order().getId());assertEquals(new BigDecimal("40000"),p.getAmount());assertEquals(1,payments.count());assertEquals(0,loans.count());}
- @Test void duplicatedVerifiedWebhookCreatesOneLoan(){var p=order();doReturn(state(p,"PAID")).when(gateway).lookup(any());service.webhook(webhook(p));service.webhook(webhook(p));assertEquals(1,loans.count());assertEquals("PAID",payments.findById(p.getId()).orElseThrow().getStatus());assertEquals(0,book.getAvailableQuantity());}
+ @Test void duplicatedVerifiedWebhookCreatesOneLoan(){var p=order();doReturn(state(p,"PAID")).when(gateway).lookup(any());service.webhook(webhook(p));service.webhook(webhook(p));assertEquals(1,loans.count());var emails=events.stream(ReaderEmail.class).toList();assertEquals(1,emails.size());assertEquals("payer@test.com",emails.getFirst().recipient());assertTrue(emails.getFirst().body().contains(p.getId()));assertEquals("PAID",payments.findById(p.getId()).orElseThrow().getStatus());assertEquals(0,book.getAvailableQuantity());}
  @Test void forgedWebhookCannotCreateLoan(){var p=order();var body=(com.fasterxml.jackson.databind.node.ObjectNode)webhook(p);body.put("signature","0".repeat(64));assertThrows(IllegalArgumentException.class,()->service.webhook(body));assertEquals(0,loans.count());verify(gateway,never()).lookup(any());}
  @Test void signedWrongAmountDoesNotAllocateBooks(){var p=order();var d=(com.fasterxml.jackson.databind.node.ObjectNode)state(p,"PAID");d.put("amount",1);assertThrows(IllegalArgumentException.class,()->checkout.reconcilePayos(p.getId(),d));assertEquals(0,loans.count());}
  @Test void stockUnavailableIsRecordedForReview(){var p=order();inventory.take(book.getId(),1,BookCopyStatus.BORROWED);checkout.reconcilePayos(p.getId(),state(p,"PAID"));assertEquals("REVIEW_REQUIRED",p.getStatus());assertEquals(0,loans.count());}
@@ -47,5 +48,20 @@ class PayosIntegrationTest {
   request.setPolicyAccepted(true);request.setPolicyVersion("old-version");mvc.perform(post("/api/v1/payments/cash").header("Idempotency-Key","consent-check-123456").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(request))).andExpect(status().isBadRequest());
   request.setPolicyVersion(BorrowingPolicy.VERSION);request.setDays(17);mvc.perform(post("/api/v1/payments/cash").header("Idempotency-Key","consent-check-123456").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(request))).andExpect(status().isOk()).andExpect(jsonPath("$.amount").value(40000));
   var saved=payments.findAll().get(0);assertTrue(json.readTree(saved.getRequestJson()).path("policyAccepted").asBoolean());assertEquals(BorrowingPolicy.VERSION,json.readTree(saved.getRequestJson()).path("policyVersion").asText());assertNotNull(saved.getCreatedAt());
+ }
+
+ @Autowired AuthService authService;
+ @Autowired org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+ @Test void successfulPasswordChangePublishesEmailWithoutPassword() {
+  var user=users.findByEmail("payer@test.com").orElseThrow();
+  user.setPassword(passwordEncoder.encode("old-password"));
+  users.saveAndFlush(user);
+  authService.changePassword(user.getEmail(), "old-password", "new-password");
+  var emails=events.stream(ReaderEmail.class).toList();
+  assertEquals(1,emails.size());
+  assertEquals(user.getEmail(),emails.getFirst().recipient());
+  assertFalse(emails.getFirst().body().contains("new-password"));
+  assertTrue(passwordEncoder.matches("new-password",user.getPassword()));
  }
 }
