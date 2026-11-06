@@ -67,7 +67,11 @@ public class BorrowCheckoutService {
   if(!"CASH".equals(payment.getMethod()))throw new IllegalArgumentException("Chỉ xác nhận tiền mặt tại quầy; chuyển khoản được xác nhận tự động");
   if("PAID".equals(payment.getStatus()))return payment;
   if(!"UNPAID".equals(payment.getStatus()))throw new IllegalStateException("Trạng thái giao dịch không hợp lệ");
-  payment.setStatus("PAID");payment.setConfirmedBy(admin);payment.setConfirmedAt(now());payment.setMessage("Đã thu tiền trực tiếp tại thư viện");return payment;
+  payment.setStatus("PAID");payment.setConfirmedBy(admin);payment.setConfirmedAt(now());payment.setMessage("Đã thu tiền trực tiếp tại thư viện");
+  if (payment.getUser() != null && payment.getLoanId() != null) {
+   events.publishEvent(ReaderEmail.cashPaymentConfirmed(payment.getUser().getEmail(), payment.getAmount(), payment.getLoanId()));
+  }
+  return payment;
  }
  private Map<String,String> reply(String code,String message){return Map.of("RspCode",code,"Message",message);}
  @Transactional public Map<String,String> ipn(Map<String,String> params){

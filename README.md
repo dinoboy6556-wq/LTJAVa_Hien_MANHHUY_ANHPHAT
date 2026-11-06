@@ -44,6 +44,17 @@ Nếu Maven Wrapper không tải được Maven, cần kết nối Internet ho�
 
 Các lệnh kết nối database đọc `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`; mặc định là Laragon local (`library_db`, user `root`, mật khẩu trống). Đặt `APP_JWT_SECRET` thành chuỗi bí mật riêng trước khi triển khai; giá trị mặc định chỉ dành cho phát triển local.
 
+Để gửi mã OTP khi đổi mật khẩu qua Gmail thật, thiết lập biến môi trường:
+
+```powershell
+$env:MAIL_HOST='smtp.gmail.com'
+$env:MAIL_PORT='587'
+$env:MAIL_USERNAME='your.gmail@gmail.com'
+$env:MAIL_PASSWORD='your-16-char-app-password'
+$env:LIBRARY_MAIL_ENABLED='true'
+```
+
+Lưu ý: với Gmail, `MAIL_PASSWORD` phải là App Password, không phải mật khẩu chính của tài khoản Google.
 ## Cập nhật database: mã riêng cho từng quyển sách
 
 Trước khi chạy phiên bản quản lý từng quyển, đọc [hướng dẫn chuyển đổi book_copies](library/docs/BOOK_COPIES.md). Có bảng mới, hai cột khóa ngoại mới và bước chuyển dữ liệu tồn kho/phiếu đang mượn. Database Laragon của nhánh này là `library_db`.

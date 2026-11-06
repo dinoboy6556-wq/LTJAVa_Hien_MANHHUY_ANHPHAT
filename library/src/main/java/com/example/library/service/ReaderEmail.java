@@ -5,6 +5,11 @@ import java.text.NumberFormat;
 import java.util.Locale;
 
 public record ReaderEmail(String recipient, String subject, String body) {
+    static ReaderEmail cashPaymentConfirmed(String recipient, BigDecimal amount, Long loanId) {
+        return new ReaderEmail(recipient, "Mộc Library | Thanh toán tại thư viện thành công",
+                "Thư viện đã xác nhận thu " + amount.toPlainString() + " đ cho phiếu mượn #" + loanId + ".");
+    }
+
     static ReaderEmail paymentConfirmed(String recipient, String reference, BigDecimal amount, Long loanId) {
         String total = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("vi-VN")).format(amount);
         return new ReaderEmail(recipient, "Mộc Library | Chuyển khoản thành công", """
