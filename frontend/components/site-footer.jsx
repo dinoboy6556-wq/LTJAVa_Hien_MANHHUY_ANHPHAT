@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, ArrowUp, BookOpen, Clock3, Heart, Library, UserRound } from 'lucide-react';
+import { ArrowUp, BookOpen, Clock3, Heart, Library, UserRound } from 'lucide-react';
 import SiteContent from './site-content';
 
 const exploreLinks = [
@@ -37,14 +37,10 @@ export default function SiteFooter() {
         {readerLinks.map(({ href, label, icon: Icon }) => <Link href={href} key={href}><Icon size={15} />{label}</Link>)}
       </nav>
 
-      <section className="footer-help">
-        <h3>Ở Mộc, bạn có thể</h3>
-        <ul>
-          <li>Tìm sách theo tên, tác giả và thể loại</li>
-          <li>Mượn sách và theo dõi hạn trả</li>
-          <li>Đăng ký chờ khi sách tạm hết</li>
-        </ul>
-        <Link className="footer-help-link" href="/books">Bắt đầu khám phá <ArrowRight size={15} /></Link>
+      <section className="footer-contact" aria-label="Liên hệ thư viện">
+        <h3>Liên hệ thư viện</h3>
+        <SiteContent mode="contacts" className="footer-contact-details"/>
+        <Link href="/read/lien-he">Liên hệ & hỗ trợ</Link>
       </section>
     </div>
 

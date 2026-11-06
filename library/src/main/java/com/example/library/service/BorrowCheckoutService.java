@@ -84,12 +84,21 @@ public class BorrowCheckoutService {
   var p=new BorrowPayment();p.setId("PO"+new java.math.BigInteger(UUID.randomUUID().toString().replace("-",""),16).mod(new java.math.BigInteger("8000000000000000")).add(java.math.BigInteger.ONE));p.setUser(user);p.setRequestKey(key);p.setRequestJson(payload);p.setAmount(amount);p.setMethod("PAYOS");p.setStatus("PENDING");p.setCreatedAt(now());p.setExpiresAt(now().plusMinutes(15));p.setMessage("Chờ xác nhận chuyển khoản ngân hàng");return payments.saveAndFlush(p);
  }
  @Transactional(readOnly=true) public BorrowPayment ownedPayos(String id,String email){var p=payments.findById(id).orElseThrow(()->new IllegalArgumentException("Không tìm thấy giao dịch"));if(!p.getUser().getEmail().equals(email))throw new org.springframework.security.access.AccessDeniedException("Không có quyền truy cập");if(!"PAYOS".equals(p.getMethod()))throw new IllegalArgumentException("Không phải giao dịch chuyển khoản");return p;}
+ @Transactional(readOnly=true) public LoanCreateRequest payosOrder(String id,String email){var p=ownedPayos(id,email);try{return json.readValue(p.getRequestJson(),LoanCreateRequest.class);}catch(Exception e){throw new IllegalStateException("Không đọc được danh sách sách đã đặt");}}
+ @Transactional public BorrowPayment preparePayosRetry(String email,String id){
+  users.findForUpdateByEmail(email).orElseThrow();var old=ownedPayos(id,email);if(!"FAILED".equals(old.getStatus()))throw new IllegalStateException("Chỉ tiếp tục giao dịch đã hủy hoặc hết hạn, chưa nhận tiền");
+  var request=payosOrder(id,email);String key="retry-"+id;var existing=payments.findByUser_IdAndRequestKey(old.getUser().getId(),key);
+  if(existing.isPresent()){if(!"PENDING".equals(existing.get().getStatus()))throw new IllegalStateException("Lần thanh toán tiếp theo đã xử lý. Xem giao dịch mới nhất trong danh sách.");return existing.get();}
+  if(quote(request).compareTo(old.getAmount())!=0)throw new IllegalStateException("Phí hoặc tồn kho đã thay đổi. Xem lại sách trong giỏ và xác nhận đơn mới.");
+  return preparePayos(email,request,key);
+ }
+ @Transactional public void abandonPayos(String id,String email){var p=payments.lock(id).orElseThrow();if(!p.getUser().getEmail().equals(email))throw new org.springframework.security.access.AccessDeniedException("Không có quyền truy cập");if(!"PAYOS".equals(p.getMethod()))throw new IllegalArgumentException("Không phải giao dịch chuyển khoản");if("CANCELLED".equals(p.getStatus()))return;if(!"FAILED".equals(p.getStatus()))throw new IllegalStateException("Giao dịch chưa được xác nhận hủy hoặc đã nhận tiền, không thể hủy yêu cầu");p.setStatus("CANCELLED");p.setMessage("Người đọc đã hủy yêu cầu. Có thể đặt đơn mới hoặc chọn phương thức khác.");}
  @Transactional public void reconcilePayos(String id,com.fasterxml.jackson.databind.JsonNode data){
   var found=payments.lock(id);if(found.isEmpty())return;var p=found.get();if(!"PAYOS".equals(p.getMethod()))throw new IllegalArgumentException("Phương thức không hợp lệ");
   if(!data.path("orderCode").isIntegralNumber()||!id.equals("PO"+data.path("orderCode").asLong())||data.path("amount").decimalValue().compareTo(p.getAmount())!=0)throw new IllegalArgumentException("Thông tin giao dịch không khớp");
   String state=data.path("status").asText();
   if("PAID".equals(p.getStatus())||"REVIEW_REQUIRED".equals(p.getStatus()))return;
-  if(List.of("CANCELLED","EXPIRED").contains(state)){if("PENDING".equals(p.getStatus())){p.setStatus("FAILED");p.setMessage("Giao dịch đã hủy hoặc hết hạn tại ngân hàng");}return;}
+  if(List.of("CANCELLED","EXPIRED").contains(state)){if(data.path("amountPaid").decimalValue().signum()>0){p.setStatus("REVIEW_REQUIRED");p.setMessage("Giao dịch hủy nhưng đã nhận một phần tiền. Liên hệ thư viện để đối soát trước khi chuyển thêm.");return;}if("PENDING".equals(p.getStatus())){p.setStatus("FAILED");p.setMessage("Giao dịch đã hủy hoặc hết hạn tại ngân hàng");}return;}
   if(!"PAID".equals(state))return;
   if(!data.has("amountPaid")||data.path("amountPaid").decimalValue().compareTo(p.getAmount())<0)throw new IllegalArgumentException("Ngân hàng chưa nhận đủ tiền");
   p.setTransactionNo(data.path("id").asText());p.setConfirmedAt(now());p.setConfirmedBy("PAYOS");

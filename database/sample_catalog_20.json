@@ -1,72 +1,72 @@
 {
-  "note": "Dữ liệu hư cấu để kiểm thử, không phải thông tin xuất bản thật. Chạy lại cùng mã demo không thêm trùng. Không tạo thanh toán giả.",
+  "note": "Dữ liệu hư cấu phục vụ kiểm thử, không phải thông tin xuất bản thật. Khóa bản ghi và liên kết nghiệp vụ được giữ nguyên.",
   "categories": [
     {
       "name": "Kỹ năng sống",
-      "description": "Thể loại mẫu phục vụ kiểm thử danh mục và ràng buộc liên kết."
+      "description": "Sách kỹ năng sống."
     },
     {
       "name": "Khoa học phổ thông",
-      "description": "Thể loại mẫu phục vụ kiểm thử danh mục và ràng buộc liên kết."
+      "description": "Sách khoa học phổ thông."
     },
     {
       "name": "Lịch sử & Văn hóa",
-      "description": "Thể loại mẫu phục vụ kiểm thử danh mục và ràng buộc liên kết."
+      "description": "Sách lịch sử & văn hóa."
     },
     {
       "name": "Ngoại ngữ",
-      "description": "Thể loại mẫu phục vụ kiểm thử danh mục và ràng buộc liên kết."
+      "description": "Sách ngoại ngữ."
     },
     {
       "name": "Thiếu nhi",
-      "description": "Thể loại mẫu phục vụ kiểm thử danh mục và ràng buộc liên kết."
+      "description": "Sách thiếu nhi."
     }
   ],
   "authors": [
     {
-      "name": "Nguyễn Minh An (Demo)",
-      "biography": "Tác giả hư cấu trong bộ dữ liệu mẫu kiểm thử thư viện."
+      "name": "Nguyễn Minh An",
+      "biography": ""
     },
     {
-      "name": "Trần Thu Hà (Demo)",
-      "biography": "Tác giả hư cấu trong bộ dữ liệu mẫu kiểm thử thư viện."
+      "name": "Trần Thu Hà",
+      "biography": ""
     },
     {
-      "name": "Lê Hoàng Nam (Demo)",
-      "biography": "Tác giả hư cấu trong bộ dữ liệu mẫu kiểm thử thư viện."
+      "name": "Lê Hoàng Nam",
+      "biography": ""
     },
     {
-      "name": "Phạm Ngọc Linh (Demo)",
-      "biography": "Tác giả hư cấu trong bộ dữ liệu mẫu kiểm thử thư viện."
+      "name": "Phạm Ngọc Linh",
+      "biography": ""
     },
     {
-      "name": "Võ Thanh Bình (Demo)",
-      "biography": "Tác giả hư cấu trong bộ dữ liệu mẫu kiểm thử thư viện."
+      "name": "Võ Thanh Bình",
+      "biography": ""
     }
   ],
   "publishers": [
     {
-      "name": "NXB Mộc Tri Thức (Demo)",
+      "name": "NXB Mộc Tri Thức",
       "address": "Hà Nội",
       "phone": "02870000000"
     },
     {
-      "name": "NXB Mộc Sáng Tạo (Demo)",
+      "name": "NXB Mộc Sáng Tạo",
       "address": "TP. Hồ Chí Minh",
       "phone": "02870000001"
     },
     {
-      "name": "NXB Mộc Văn Hóa (Demo)",
+      "name": "NXB Mộc Văn Hóa",
       "address": "Đà Nẵng",
       "phone": "02870000002"
     },
     {
-      "name": "NXB Mộc Học Tập (Demo)",
+      "name": "NXB Mộc Học Tập",
       "address": "Huế",
       "phone": "02870000003"
     },
     {
-      "name": "NXB Mộc Tuổi Thơ (Demo)",
+      "name": "NXB Mộc Tuổi Thơ",
       "address": "Cần Thơ",
       "phone": "02870000004"
     }
@@ -74,11 +74,11 @@
   "books": [
     {
       "title": "Thói quen nhỏ mỗi ngày",
-      "isbn": "DEMO-20261106-01",
-      "description": "Sách mẫu thuộc nhóm Kỹ năng sống, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-01",
+      "description": "",
       "category": "Kỹ năng sống",
-      "author": "Nguyễn Minh An (Demo)",
-      "publisher": "NXB Mộc Sáng Tạo (Demo)",
+      "author": "Nguyễn Minh An",
+      "publisher": "NXB Mộc Sáng Tạo",
       "totalQuantity": 3,
       "rentalPrice": 5000,
       "salePrice": 60000,
@@ -86,11 +86,11 @@
     },
     {
       "title": "Quản lý thời gian hiệu quả",
-      "isbn": "DEMO-20261106-02",
-      "description": "Sách mẫu thuộc nhóm Kỹ năng sống, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-02",
+      "description": "",
       "category": "Kỹ năng sống",
-      "author": "Trần Thu Hà (Demo)",
-      "publisher": "NXB Mộc Văn Hóa (Demo)",
+      "author": "Trần Thu Hà",
+      "publisher": "NXB Mộc Văn Hóa",
       "totalQuantity": 4,
       "rentalPrice": 6000,
       "salePrice": 70000,
@@ -98,11 +98,11 @@
     },
     {
       "title": "Lắng nghe và thấu hiểu",
-      "isbn": "DEMO-20261106-03",
-      "description": "Sách mẫu thuộc nhóm Kỹ năng sống, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-03",
+      "description": "",
       "category": "Kỹ năng sống",
-      "author": "Lê Hoàng Nam (Demo)",
-      "publisher": "NXB Mộc Học Tập (Demo)",
+      "author": "Lê Hoàng Nam",
+      "publisher": "NXB Mộc Học Tập",
       "totalQuantity": 5,
       "rentalPrice": 7000,
       "salePrice": 80000,
@@ -110,11 +110,11 @@
     },
     {
       "title": "Tự tin bước về phía trước",
-      "isbn": "DEMO-20261106-04",
-      "description": "Sách mẫu thuộc nhóm Kỹ năng sống, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-04",
+      "description": "",
       "category": "Kỹ năng sống",
-      "author": "Phạm Ngọc Linh (Demo)",
-      "publisher": "NXB Mộc Tuổi Thơ (Demo)",
+      "author": "Phạm Ngọc Linh",
+      "publisher": "NXB Mộc Tuổi Thơ",
       "totalQuantity": 6,
       "rentalPrice": 8000,
       "salePrice": 90000,
@@ -122,11 +122,11 @@
     },
     {
       "title": "Khám phá hệ Mặt Trời",
-      "isbn": "DEMO-20261106-05",
-      "description": "Sách mẫu thuộc nhóm Khoa học phổ thông, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-05",
+      "description": "",
       "category": "Khoa học phổ thông",
-      "author": "Trần Thu Hà (Demo)",
-      "publisher": "NXB Mộc Văn Hóa (Demo)",
+      "author": "Trần Thu Hà",
+      "publisher": "NXB Mộc Văn Hóa",
       "totalQuantity": 7,
       "rentalPrice": 9000,
       "salePrice": 100000,
@@ -134,11 +134,11 @@
     },
     {
       "title": "Khoa học trong căn bếp",
-      "isbn": "DEMO-20261106-06",
-      "description": "Sách mẫu thuộc nhóm Khoa học phổ thông, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-06",
+      "description": "",
       "category": "Khoa học phổ thông",
-      "author": "Lê Hoàng Nam (Demo)",
-      "publisher": "NXB Mộc Học Tập (Demo)",
+      "author": "Lê Hoàng Nam",
+      "publisher": "NXB Mộc Học Tập",
       "totalQuantity": 3,
       "rentalPrice": 10000,
       "salePrice": 110000,
@@ -146,11 +146,11 @@
     },
     {
       "title": "Bí mật của đại dương",
-      "isbn": "DEMO-20261106-07",
-      "description": "Sách mẫu thuộc nhóm Khoa học phổ thông, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-07",
+      "description": "",
       "category": "Khoa học phổ thông",
-      "author": "Phạm Ngọc Linh (Demo)",
-      "publisher": "NXB Mộc Tuổi Thơ (Demo)",
+      "author": "Phạm Ngọc Linh",
+      "publisher": "NXB Mộc Tuổi Thơ",
       "totalQuantity": 4,
       "rentalPrice": 11000,
       "salePrice": 120000,
@@ -158,11 +158,11 @@
     },
     {
       "title": "Thế giới thực vật quanh ta",
-      "isbn": "DEMO-20261106-08",
-      "description": "Sách mẫu thuộc nhóm Khoa học phổ thông, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-08",
+      "description": "",
       "category": "Khoa học phổ thông",
-      "author": "Võ Thanh Bình (Demo)",
-      "publisher": "NXB Mộc Tri Thức (Demo)",
+      "author": "Võ Thanh Bình",
+      "publisher": "NXB Mộc Tri Thức",
       "totalQuantity": 5,
       "rentalPrice": 12000,
       "salePrice": 130000,
@@ -170,11 +170,11 @@
     },
     {
       "title": "Hành trình qua các di sản Việt Nam",
-      "isbn": "DEMO-20261106-09",
-      "description": "Sách mẫu thuộc nhóm Lịch sử & Văn hóa, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-09",
+      "description": "",
       "category": "Lịch sử & Văn hóa",
-      "author": "Lê Hoàng Nam (Demo)",
-      "publisher": "NXB Mộc Học Tập (Demo)",
+      "author": "Lê Hoàng Nam",
+      "publisher": "NXB Mộc Học Tập",
       "totalQuantity": 6,
       "rentalPrice": 13000,
       "salePrice": 140000,
@@ -182,11 +182,11 @@
     },
     {
       "title": "Chuyện kể những làng nghề",
-      "isbn": "DEMO-20261106-10",
-      "description": "Sách mẫu thuộc nhóm Lịch sử & Văn hóa, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-10",
+      "description": "",
       "category": "Lịch sử & Văn hóa",
-      "author": "Phạm Ngọc Linh (Demo)",
-      "publisher": "NXB Mộc Tuổi Thơ (Demo)",
+      "author": "Phạm Ngọc Linh",
+      "publisher": "NXB Mộc Tuổi Thơ",
       "totalQuantity": 7,
       "rentalPrice": 14000,
       "salePrice": 150000,
@@ -194,11 +194,11 @@
     },
     {
       "title": "Một vòng văn hóa Việt",
-      "isbn": "DEMO-20261106-11",
-      "description": "Sách mẫu thuộc nhóm Lịch sử & Văn hóa, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-11",
+      "description": "",
       "category": "Lịch sử & Văn hóa",
-      "author": "Võ Thanh Bình (Demo)",
-      "publisher": "NXB Mộc Tri Thức (Demo)",
+      "author": "Võ Thanh Bình",
+      "publisher": "NXB Mộc Tri Thức",
       "totalQuantity": 3,
       "rentalPrice": 15000,
       "salePrice": 160000,
@@ -206,11 +206,11 @@
     },
     {
       "title": "Dấu chân trên con đường lịch sử",
-      "isbn": "DEMO-20261106-12",
-      "description": "Sách mẫu thuộc nhóm Lịch sử & Văn hóa, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-12",
+      "description": "",
       "category": "Lịch sử & Văn hóa",
-      "author": "Nguyễn Minh An (Demo)",
-      "publisher": "NXB Mộc Sáng Tạo (Demo)",
+      "author": "Nguyễn Minh An",
+      "publisher": "NXB Mộc Sáng Tạo",
       "totalQuantity": 4,
       "rentalPrice": 16000,
       "salePrice": 170000,
@@ -218,11 +218,11 @@
     },
     {
       "title": "Tiếng Anh giao tiếp mỗi ngày",
-      "isbn": "DEMO-20261106-13",
-      "description": "Sách mẫu thuộc nhóm Ngoại ngữ, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-13",
+      "description": "",
       "category": "Ngoại ngữ",
-      "author": "Phạm Ngọc Linh (Demo)",
-      "publisher": "NXB Mộc Tuổi Thơ (Demo)",
+      "author": "Phạm Ngọc Linh",
+      "publisher": "NXB Mộc Tuổi Thơ",
       "totalQuantity": 5,
       "rentalPrice": 17000,
       "salePrice": 180000,
@@ -230,11 +230,11 @@
     },
     {
       "title": "Từ vựng tiếng Anh qua câu chuyện",
-      "isbn": "DEMO-20261106-14",
-      "description": "Sách mẫu thuộc nhóm Ngoại ngữ, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-14",
+      "description": "",
       "category": "Ngoại ngữ",
-      "author": "Võ Thanh Bình (Demo)",
-      "publisher": "NXB Mộc Tri Thức (Demo)",
+      "author": "Võ Thanh Bình",
+      "publisher": "NXB Mộc Tri Thức",
       "totalQuantity": 6,
       "rentalPrice": 18000,
       "salePrice": 190000,
@@ -242,11 +242,11 @@
     },
     {
       "title": "Ngữ pháp tiếng Anh dễ hiểu",
-      "isbn": "DEMO-20261106-15",
-      "description": "Sách mẫu thuộc nhóm Ngoại ngữ, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-15",
+      "description": "",
       "category": "Ngoại ngữ",
-      "author": "Nguyễn Minh An (Demo)",
-      "publisher": "NXB Mộc Sáng Tạo (Demo)",
+      "author": "Nguyễn Minh An",
+      "publisher": "NXB Mộc Sáng Tạo",
       "totalQuantity": 7,
       "rentalPrice": 19000,
       "salePrice": 200000,
@@ -254,11 +254,11 @@
     },
     {
       "title": "Luyện đọc tiếng Anh theo chủ đề",
-      "isbn": "DEMO-20261106-16",
-      "description": "Sách mẫu thuộc nhóm Ngoại ngữ, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-16",
+      "description": "",
       "category": "Ngoại ngữ",
-      "author": "Trần Thu Hà (Demo)",
-      "publisher": "NXB Mộc Văn Hóa (Demo)",
+      "author": "Trần Thu Hà",
+      "publisher": "NXB Mộc Văn Hóa",
       "totalQuantity": 3,
       "rentalPrice": 20000,
       "salePrice": 210000,
@@ -266,11 +266,11 @@
     },
     {
       "title": "Khu vườn của những giấc mơ",
-      "isbn": "DEMO-20261106-17",
-      "description": "Sách mẫu thuộc nhóm Thiếu nhi, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-17",
+      "description": "",
       "category": "Thiếu nhi",
-      "author": "Võ Thanh Bình (Demo)",
-      "publisher": "NXB Mộc Tri Thức (Demo)",
+      "author": "Võ Thanh Bình",
+      "publisher": "NXB Mộc Tri Thức",
       "totalQuantity": 4,
       "rentalPrice": 21000,
       "salePrice": 220000,
@@ -278,11 +278,11 @@
     },
     {
       "title": "Cuộc phiêu lưu trong rừng xanh",
-      "isbn": "DEMO-20261106-18",
-      "description": "Sách mẫu thuộc nhóm Thiếu nhi, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-18",
+      "description": "",
       "category": "Thiếu nhi",
-      "author": "Nguyễn Minh An (Demo)",
-      "publisher": "NXB Mộc Sáng Tạo (Demo)",
+      "author": "Nguyễn Minh An",
+      "publisher": "NXB Mộc Sáng Tạo",
       "totalQuantity": 5,
       "rentalPrice": 22000,
       "salePrice": 230000,
@@ -290,11 +290,11 @@
     },
     {
       "title": "Chú mèo và thành phố nhỏ",
-      "isbn": "DEMO-20261106-19",
-      "description": "Sách mẫu thuộc nhóm Thiếu nhi, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-19",
+      "description": "",
       "category": "Thiếu nhi",
-      "author": "Trần Thu Hà (Demo)",
-      "publisher": "NXB Mộc Văn Hóa (Demo)",
+      "author": "Trần Thu Hà",
+      "publisher": "NXB Mộc Văn Hóa",
       "totalQuantity": 6,
       "rentalPrice": 23000,
       "salePrice": 240000,
@@ -302,11 +302,11 @@
     },
     {
       "title": "Những câu chuyện trước giờ ngủ",
-      "isbn": "DEMO-20261106-20",
-      "description": "Sách mẫu thuộc nhóm Thiếu nhi, dùng để thử tìm kiếm, lọc, phân trang, thêm giỏ và mượn/trả. Nội dung, tác giả và nhà xuất bản là dữ liệu minh họa, không phải thông tin xuất bản thật.",
+      "isbn": "20261106-20",
+      "description": "",
       "category": "Thiếu nhi",
-      "author": "Lê Hoàng Nam (Demo)",
-      "publisher": "NXB Mộc Học Tập (Demo)",
+      "author": "Lê Hoàng Nam",
+      "publisher": "NXB Mộc Học Tập",
       "totalQuantity": 7,
       "rentalPrice": 24000,
       "salePrice": 250000,

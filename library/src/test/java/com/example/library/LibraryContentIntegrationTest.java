@@ -4,11 +4,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @SpringBootTest(properties={"spring.datasource.url=jdbc:h2:mem:content_test;DB_CLOSE_DELAY=-1","spring.datasource.driver-class-name=org.h2.Driver","spring.datasource.username=sa","spring.datasource.password=","spring.jpa.database-platform=org.hibernate.dialect.H2Dialect","spring.jpa.hibernate.ddl-auto=create-drop","app.seed.enabled=false"}) @AutoConfigureMockMvc @Transactional
 class LibraryContentIntegrationTest {
  @Autowired MockMvc mvc;
- @Test @WithMockUser(roles="LIBRARIAN") void librarianCanPublishPageButCannotEditConfig() throws Exception {
+ @Test @WithMockUser(roles="ADMIN") void administratorCanPublishPage() throws Exception {
   mvc.perform(post("/api/v1/content/manage/PAGE").contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"About\",\"slug\":\"about\",\"body\":\"Hello <script>bad</script>\",\"published\":true}")).andExpect(status().isOk());
   mvc.perform(get("/api/v1/content/read/about")).andExpect(status().isOk()).andExpect(jsonPath("$.body").value("Hello <script>bad</script>"));
   mvc.perform(get("/user/read/about")).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("http://localhost:3000/read/about"));
-  mvc.perform(post("/api/v1/content/manage/CONFIG").contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"Site\",\"slug\":\"site\"}")).andExpect(status().isForbidden());
+
  }
  @Test @WithMockUser(roles="ADMIN") void draftsAreNotPublicAndMenuRejectsExternalLinks() throws Exception {
   mvc.perform(post("/api/v1/content/manage/PAGE").contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"Draft\",\"slug\":\"draft\",\"published\":false}")).andExpect(status().isOk());

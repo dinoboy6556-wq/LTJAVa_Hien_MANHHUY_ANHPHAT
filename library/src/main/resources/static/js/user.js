@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (error) {
       message.classList.remove('success');
-      message.textContent = error.message || 'Không thể kết nối máy chủ. Hãy kiểm tra Spring Boot.';
+      message.textContent = error.message || 'Không thể kết nối. Vui lòng thử lại sau.';
     } finally {
       button.disabled = false;
       button.style.opacity = '1';

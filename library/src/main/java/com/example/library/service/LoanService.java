@@ -38,7 +38,7 @@ public class LoanService {
     @Autowired private ReservationRepository reservations;
 
     public List<Loan> getAllLoans() {
-        return loanRepository.findAll();
+        return loanRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC,"borrowDate","id"));
     }
 
     public List<Loan> getMyLoans() {
@@ -126,11 +126,11 @@ public class LoanService {
 
         long overdueDays = Math.max(0, ChronoUnit.DAYS.between(loan.getDueDate(), today));
         int totalBooks = selected.stream().mapToInt(LoanItem::getQuantity).sum();
-        BigDecimal overdueFine = BigDecimal.valueOf(overdueDays * 10000L * totalBooks);
+        BigDecimal overdueFine = BigDecimal.valueOf(overdueDays * BorrowingPolicy.OVERDUE_PER_COPY_PER_DAY * totalBooks);
         BigDecimal conditionFine = BigDecimal.ZERO;
 
         if (condition == BookReturnCondition.DAMAGED) {
-            conditionFine = BigDecimal.valueOf(50000L * totalBooks);
+            conditionFine = BigDecimal.valueOf(BorrowingPolicy.DAMAGED_PER_COPY * totalBooks);
         } else if (condition == BookReturnCondition.LOST) {
             conditionFine = selected.stream()
                     .map(item -> item.getBook().getSalePrice().multiply(BigDecimal.valueOf(item.getQuantity())))

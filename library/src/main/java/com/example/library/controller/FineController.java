@@ -16,14 +16,14 @@ public class FineController {
     public FineController(FineRepository fines) { this.fines = fines; }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public List<Fine> list() { return fines.findAll(); }
 
     @GetMapping("/my-fines")
     public List<Fine> myFines(Authentication auth) { return fines.findByLoan_User_EmailOrderByCreatedAtDesc(auth.getName()); }
 
     @PostMapping("/{id}/mark-paid")
-    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Fine markPaid(@PathVariable Long id) {
         Fine fine = fines.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khoản phạt"));

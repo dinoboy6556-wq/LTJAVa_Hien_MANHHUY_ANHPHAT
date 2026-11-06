@@ -32,7 +32,7 @@ foreach ($resource in @('categories','authors','publishers')) {
     $maps[$resource] = $lookup
 }
 $existing = @{}
-foreach ($book in (Read-Records 'books')) { if ($book.isbn) { $existing[$book.isbn] = $book.id } }
+foreach ($book in (Read-Records 'books')) { if ($book.isbn) { $existing[($book.isbn -replace '^DEMO-','')] = $book.id } }
 $created.books = 0
 foreach ($book in $sample.books) {
     if ($existing.ContainsKey($book.isbn)) { continue }

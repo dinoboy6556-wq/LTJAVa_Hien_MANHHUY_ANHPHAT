@@ -35,6 +35,8 @@ export const api = {
   cancelReservation: (id) => apiRequest('/reservations/'+id,{method:'DELETE'}),
   notifications: () => apiRequest('/notifications'),
   payments: () => apiRequest('/payments/my'),
+  paymentOrder: (id) => apiRequest(`/payments/payos/${id}/order`),
+  cancelPayment: (id) => apiRequest(`/payments/payos/${id}/cancel`,{method:'POST'}),
   resumePayment: (id) => apiRequest(`/payments/payos/${id}/resume`,{method:'POST'}),
   syncPayment: (id) => apiRequest(`/payments/payos/${id}/sync`,{method:'POST'}),
   checkout: (method,body,key) => apiRequest(method==='CASH'?'/payments/cash':method==='PAYOS'?'/payments/payos/checkout':'/payments/checkout',{method:'POST',headers:{'Idempotency-Key':key},body:JSON.stringify(body)}),
