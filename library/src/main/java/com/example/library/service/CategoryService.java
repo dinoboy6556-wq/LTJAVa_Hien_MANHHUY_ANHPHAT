@@ -16,6 +16,7 @@ public class CategoryService {
     }
 
     public Category create(Category category) {
+        category.setId(null);category.setName(category.getName().trim());
         return categoryRepository.save(category);
     }
 }

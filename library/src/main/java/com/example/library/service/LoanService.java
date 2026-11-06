@@ -38,7 +38,7 @@ public class LoanService {
     @Autowired private ReservationRepository reservations;
 
     public List<Loan> getAllLoans() {
-        return loanRepository.findAll();
+        return loanRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC,"borrowDate","id"));
     }
 
     public List<Loan> getMyLoans() {
@@ -61,7 +61,9 @@ public class LoanService {
         Loan loan = new Loan();
         loan.setUser(user);
         loan.setBorrowDate(LocalDate.now());
-        loan.setDueDate(LocalDate.now().plusDays(request.getDays() != null ? request.getDays() : 14));
+        int days = request.getDays() != null ? request.getDays() : 14;
+        RentalPricing.periodsFor(days);
+        loan.setDueDate(LocalDate.now().plusDays(days));
         loan.setStatus(LoanStatus.BORROWED);
         loan.setFineAmount(BigDecimal.ZERO);
 
@@ -72,12 +74,13 @@ public class LoanService {
             Book book = copyService.lockBook(itemReq.getBookId());
             List<BookCopy> selected = copyService.take(book.getId(), itemReq.getQuantity(), BookCopyStatus.BORROWED);
 
-            BigDecimal rentalFee = book.getRentalPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+            BigDecimal pricePerCopy = RentalPricing.pricePerCopy(book.getRentalPrice(), days);
+            BigDecimal rentalFee = pricePerCopy.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalRentalFee = totalRentalFee.add(rentalFee);
 
             for (BookCopy copy : selected) {
                 LoanItem item = LoanItem.builder().loan(loan).book(book).copy(copy).quantity(1)
-                        .rentalPrice(book.getRentalPrice())
+                        .rentalPrice(pricePerCopy)
                         .build();
                 items.add(item);
             }
@@ -123,11 +126,11 @@ public class LoanService {
 
         long overdueDays = Math.max(0, ChronoUnit.DAYS.between(loan.getDueDate(), today));
         int totalBooks = selected.stream().mapToInt(LoanItem::getQuantity).sum();
-        BigDecimal overdueFine = BigDecimal.valueOf(overdueDays * 10000L * totalBooks);
+        BigDecimal overdueFine = BigDecimal.valueOf(overdueDays * BorrowingPolicy.OVERDUE_PER_COPY_PER_DAY * totalBooks);
         BigDecimal conditionFine = BigDecimal.ZERO;
 
         if (condition == BookReturnCondition.DAMAGED) {
-            conditionFine = BigDecimal.valueOf(50000L * totalBooks);
+            conditionFine = BigDecimal.valueOf(BorrowingPolicy.DAMAGED_PER_COPY * totalBooks);
         } else if (condition == BookReturnCondition.LOST) {
             conditionFine = selected.stream()
                     .map(item -> item.getBook().getSalePrice().multiply(BigDecimal.valueOf(item.getQuantity())))

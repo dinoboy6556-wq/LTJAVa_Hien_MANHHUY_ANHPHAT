@@ -6,7 +6,7 @@ import {api} from '../../../lib/api';
 import {useAccount,AccountState,money} from '../../../components/account-data';
 
 const roleLabels={ROLE_ADMIN:'Quản trị viên',ROLE_LIBRARIAN:'Thủ thư',ROLE_USER:'Độc giả'};
-const paymentLabels={UNPAID:'Chờ thu tại quầy',PENDING:'Chờ xác nhận',PAID:'Đã thanh toán',FAILED:'Không thành công',REVIEW_REQUIRED:'Cần thư viện xử lý'};
+const paymentLabels={UNPAID:'Chờ thu tại quầy',PENDING:'Chờ xác nhận',PAID:'Đã thanh toán',FAILED:'Link đã hủy / hết hạn',CANCELLED:'Đã hủy yêu cầu',REVIEW_REQUIRED:'Cần thư viện xử lý'};
 const date=value=>value?String(value).split('-').reverse().join('/'):'—';
 async function loadProfile(){
  const profile=await api.profile();

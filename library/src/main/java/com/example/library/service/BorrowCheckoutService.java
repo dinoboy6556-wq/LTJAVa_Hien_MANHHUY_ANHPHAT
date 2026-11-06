@@ -4,6 +4,7 @@ import com.example.library.dto.*;
 import com.example.library.repository.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.math.BigDecimal;
@@ -20,7 +21,7 @@ public BorrowCheckoutService(BorrowPaymentRepository payments,UserRepository use
   for(var entry:counts.entrySet()){var book=books.findForUpdate(entry.getKey()).orElseThrow(()->new IllegalArgumentException("Sách không còn tồn tại"));
    if(copies.countByBookIdAndStatus(book.getId(),BookCopyStatus.AVAILABLE)<entry.getValue())throw new IllegalStateException("Không đủ quyển: "+book.getTitle());
    if(book.getRentalPrice()==null||book.getRentalPrice().signum()<0)throw new IllegalStateException("Phí sách không hợp lệ");
-   total=total.add(book.getRentalPrice().multiply(BigDecimal.valueOf(entry.getValue())));
+   total=total.add(RentalPricing.pricePerCopy(book.getRentalPrice(),request.getDays()).multiply(BigDecimal.valueOf(entry.getValue())));
   }return total;
  }
  @Transactional public Map<String,Object> checkout(String email,LoanCreateRequest request,String key,String ip){
@@ -46,14 +47,14 @@ public BorrowCheckoutService(BorrowPaymentRepository payments,UserRepository use
    var p=existing.get();if(!"CASH".equals(p.getMethod())||!payload.equals(p.getRequestJson()))throw new IllegalStateException("Mã yêu cầu đã dùng cho giỏ hoặc phương thức khác");
    return Map.of("id",p.getId(),"loanId",p.getLoanId(),"amount",p.getAmount());
   }
-  if(payments.findByUser_EmailOrderByCreatedAtDesc(email).stream().anyMatch(p->"PENDING".equals(p.getStatus())&&p.getExpiresAt().isAfter(now())))throw new IllegalStateException("Bạn đang có giao dịch VNPay chờ xác nhận. Kiểm tra trước khi đặt lại tại quầy.");
+  if(payments.findByUser_EmailOrderByCreatedAtDesc(email).stream().anyMatch(p->"PENDING".equals(p.getStatus())&&("PAYOS".equals(p.getMethod())||p.getExpiresAt().isAfter(now()))))throw new IllegalStateException("Bạn đang có giao dịch chuyển khoản chờ xác nhận. Kiểm tra trước khi đặt lại tại quầy.");
   var amount=quote(request);var loan=loans.createForUser(request,email);
   var payment=new BorrowPayment();payment.setId(UUID.randomUUID().toString().replace("-",""));payment.setUser(user);payment.setRequestKey(key);payment.setRequestJson(payload);payment.setAmount(amount);payment.setMethod("CASH");payment.setStatus("UNPAID");payment.setCreatedAt(now());payment.setExpiresAt(now());payment.setLoanId(loan.getId());payment.setMessage("Chờ thanh toán trực tiếp tại thư viện");payments.save(payment);
   return Map.of("id",payment.getId(),"loanId",loan.getId(),"amount",amount);
  }
  @Transactional public BorrowPayment confirmCash(String id,String admin){
   var payment=payments.lock(id).orElseThrow(()->new IllegalArgumentException("Không tìm thấy giao dịch"));
-  if(!"CASH".equals(payment.getMethod()))throw new IllegalArgumentException("Chỉ xác nhận tiền mặt tại quầy; VNPay được xác nhận tự động");
+  if(!"CASH".equals(payment.getMethod()))throw new IllegalArgumentException("Chỉ xác nhận tiền mặt tại quầy; chuyển khoản được xác nhận tự động");
   if("PAID".equals(payment.getStatus()))return payment;
   if(!"UNPAID".equals(payment.getStatus()))throw new IllegalStateException("Trạng thái giao dịch không hợp lệ");
   payment.setStatus("PAID");payment.setConfirmedBy(admin);payment.setConfirmedAt(now());payment.setMessage("Đã thu tiền trực tiếp tại thư viện");

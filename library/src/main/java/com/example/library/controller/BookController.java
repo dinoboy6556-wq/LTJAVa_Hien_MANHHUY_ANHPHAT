@@ -31,6 +31,16 @@ public class BookController {
     @GetMapping("/home-selections")
     public com.example.library.service.HomeSelectionService.Selection homeSelections(){return homeSelections.get();}
 
+    @Autowired private com.example.library.repository.BookReviewRepository bookReviews;
+    @GetMapping("/ratings")
+    public java.util.Map<Long, RatingSummary> ratings() {
+        return bookReviews.ratingTotals().stream().collect(java.util.stream.Collectors.toMap(
+                row -> ((Number) row[0]).longValue(),
+                row -> new RatingSummary(((Number) row[1]).doubleValue(), ((Number) row[2]).longValue())
+        ));
+    }
+    public record RatingSummary(double average, long count) {}
+
     @GetMapping("/{id}")
     public ResponseEntity<Book> getBookById(@PathVariable Long id) {
         return ResponseEntity.ok(bookService.getBookById(id));
@@ -57,4 +67,7 @@ public class BookController {
     public ResponseEntity<Book> createBook(@Valid @RequestBody BookCreateRequest req) {
         return ResponseEntity.ok(bookService.createBook(req));
     }
+    @Autowired private com.example.library.service.DeletionService deletion;
+    @DeleteMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','LIBRARIAN')")
+    public ResponseEntity<Void> delete(@PathVariable Long id){deletion.deleteBook(id);return ResponseEntity.noContent().build();}
 }

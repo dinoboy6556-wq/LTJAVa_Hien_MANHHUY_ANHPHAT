@@ -5,9 +5,11 @@
 <main class="admin-shell"><aside class="admin-sidebar" aria-label="Các mục quản trị">
 <h2>Không gian quản trị</h2><nav id="adminNav"></nav><p id="adminIdentity"></p></aside>
 <div class="admin-content"><div class="admin-heading"><div><div class="eyebrow">VẬN HÀNH THƯ VIỆN</div><h1 id="sectionTitle">Tổng quan</h1></div><button id="adminRefresh" class="btn btn-secondary" type="button">Tải lại</button></div>
+
 <p id="adminMessage" role="status" aria-live="polite">Đang kiểm tra tài khoản...</p>
 <section id="adminOverview" hidden><div id="statCards" class="admin-stats"></div><div class="admin-panel"><h2>Tình trạng phiếu mượn</h2><div id="loanChart"></div></div></section>
 <section id="adminData" class="admin-panel" hidden><div class="admin-filters"><label>Tìm kiếm<input id="adminSearch" type="search" placeholder="Tên, email, mã phiếu, tên sách..."></label><label>Trạng thái<select id="adminFilter"><option value="">Tất cả</option></select></label><button id="newBook" class="btn" type="button" hidden>Thêm đầu sách</button></div><div class="admin-table-scroll"><table><thead id="adminHead"></thead><tbody id="adminRows"></tbody></table></div><div class="admin-pagination"><button id="adminPrevious" class="btn btn-secondary" type="button">← Trước</button><span id="adminPage"></span><button id="adminNext" class="btn btn-secondary" type="button">Sau →</button></div></section>
+<section id="adminSettings" class="admin-panel" hidden><div id="settingsFormHost"></div></section>
 <section id="adminReports" class="admin-panel" hidden><h2>Xuất báo cáo</h2><p>Tải CSV để mở bằng Excel.</p><div class="admin-report-buttons"><button class="btn" data-report="books">Danh sách sách</button><button class="btn" data-report="loans">Phiếu mượn</button><button class="btn" data-report="sales">Hóa đơn</button><button class="btn" data-report="fines">Khoản phạt</button></div></section>
 </div></main>
 <dialog id="adminDialog"><div class="dialog-heading"><h2 id="dialogTitle"></h2><button id="dialogClose" type="button" class="btn btn-secondary">Đóng</button></div><p id="dialogMessage" role="status"></p><div id="dialogBody"></div></dialog>

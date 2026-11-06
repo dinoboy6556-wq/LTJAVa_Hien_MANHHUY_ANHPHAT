@@ -118,6 +118,7 @@ public class AuthService {
 
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+        events.publishEvent(ReaderEmail.passwordChanged(user.getEmail()));
     }
 
     public User register(RegisterRequest registerRequest) {

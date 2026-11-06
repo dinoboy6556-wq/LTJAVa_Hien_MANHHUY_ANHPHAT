@@ -16,6 +16,7 @@ public class CatalogService {
     private String pattern(String text) {
         return "%" + text.trim().toLowerCase(Locale.ROOT).replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
     }
+    @org.springframework.transaction.annotation.Transactional(readOnly=true)
     public Page<Book> search(String q, String author, String category, BigDecimal min, BigDecimal max, String status, String order, int page) {
         if ((min != null && min.signum() < 0) || (max != null && max.signum() < 0) || (min != null && max != null && min.compareTo(max) > 0))
             throw new IllegalArgumentException("Khoảng phí mượn không hợp lệ.");
@@ -34,6 +35,7 @@ public class CatalogService {
         };
         Sort sort = switch (order == null ? "" : order) {
             case "title_desc" -> Sort.by("title").descending();
+            case "available" -> Sort.by("availableQuantity").descending();
             case "price_asc" -> Sort.by("rentalPrice");
             case "price_desc" -> Sort.by("rentalPrice").descending();
             case "author" -> Sort.by("author.name");

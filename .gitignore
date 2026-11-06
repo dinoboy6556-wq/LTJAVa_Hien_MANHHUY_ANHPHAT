@@ -46,3 +46,6 @@ Desktop.ini
 *.swp
 *.swo
 *~
+
+# Book cover uploads are runtime data; bundled sample covers stay tracked.
+/library/uploads/

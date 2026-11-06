@@ -40,14 +40,14 @@ public class BookService {
     @Transactional
     public Book createBook(BookCreateRequest req) {
         Category category = req.getCategoryId() != null ? 
-            categoryRepository.findById(req.getCategoryId()).orElse(null) : null;
+            categoryRepository.findById(req.getCategoryId()).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy thể loại")) : null;
         Author author = req.getAuthorId() != null ? 
-            authorRepository.findById(req.getAuthorId()).orElse(null) : null;
+            authorRepository.findById(req.getAuthorId()).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy tác giả")) : null;
         Publisher publisher = req.getPublisherId() != null ? 
-            publisherRepository.findById(req.getPublisherId()).orElse(null) : null;
+            publisherRepository.findById(req.getPublisherId()).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy nhà xuất bản")) : null;
 
         Book book = Book.builder()
-                .title(req.getTitle())
+                .title(req.getTitle().trim())
                 .isbn(req.getIsbn())
                 .coverImageUrl(req.getCoverImageUrl())
                 .description(req.getDescription())

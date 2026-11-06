@@ -1,0 +1,27 @@
+-- Bundled illustrated covers: only fill missing images, never overwrite a custom cover.
+USE library_db;
+START TRANSACTION;
+UPDATE books SET cover_image_url='/images/covers/moc-7cedd439b9cd.svg' WHERE isbn='9780132350884' AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-dece88bd22b9.svg' WHERE isbn='9786042000001' AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-102a9055663a.svg' WHERE isbn='9786042000002' AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-9d24cf1c886f.svg' WHERE isbn IN ('DEMO-20261106-01','20261106-01') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-642047858126.svg' WHERE isbn IN ('DEMO-20261106-02','20261106-02') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-a03b946118f8.svg' WHERE isbn IN ('DEMO-20261106-03','20261106-03') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-e23b02981196.svg' WHERE isbn IN ('DEMO-20261106-04','20261106-04') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-b200fad081a5.svg' WHERE isbn IN ('DEMO-20261106-05','20261106-05') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-5cb232b62423.svg' WHERE isbn IN ('DEMO-20261106-06','20261106-06') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-65482da7db10.svg' WHERE isbn IN ('DEMO-20261106-07','20261106-07') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-26587756cfbc.svg' WHERE isbn IN ('DEMO-20261106-08','20261106-08') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-c6c7e10d6669.svg' WHERE isbn IN ('DEMO-20261106-09','20261106-09') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-63cb9d435e52.svg' WHERE isbn IN ('DEMO-20261106-10','20261106-10') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-db26fe178ad1.svg' WHERE isbn IN ('DEMO-20261106-11','20261106-11') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-25bc8fd02719.svg' WHERE isbn IN ('DEMO-20261106-12','20261106-12') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-dba5b1dbd477.svg' WHERE isbn IN ('DEMO-20261106-13','20261106-13') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-0edc65b0f740.svg' WHERE isbn IN ('DEMO-20261106-14','20261106-14') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-40467755bb18.svg' WHERE isbn IN ('DEMO-20261106-15','20261106-15') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-90be3ea49fda.svg' WHERE isbn IN ('DEMO-20261106-16','20261106-16') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-fcc358ce8ed1.svg' WHERE isbn IN ('DEMO-20261106-17','20261106-17') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-14120742c141.svg' WHERE isbn IN ('DEMO-20261106-18','20261106-18') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-d1ad34eb60bb.svg' WHERE isbn IN ('DEMO-20261106-19','20261106-19') AND (cover_image_url IS NULL OR cover_image_url='');
+UPDATE books SET cover_image_url='/images/covers/moc-0f926f44f91f.svg' WHERE isbn IN ('DEMO-20261106-20','20261106-20') AND (cover_image_url IS NULL OR cover_image_url='');
+COMMIT;

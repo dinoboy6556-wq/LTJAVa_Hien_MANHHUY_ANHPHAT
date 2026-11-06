@@ -14,6 +14,7 @@ const privateAddresses = Object.values(os.networkInterfaces())
 const nextConfig = {
   // Allow dev assets and HMR when opening the app via this machine's LAN IP.
   allowedDevOrigins: [...new Set(privateAddresses)],
+  async headers(){return [{source:'/:path*',headers:[{key:'X-Content-Type-Options',value:'nosniff'},{key:'X-Frame-Options',value:'DENY'},{key:'Referrer-Policy',value:'same-origin'}]}];},
   async redirects(){return [
     ...Object.entries({'/user':'/','/user/borrowed':'/account/loans','/user/history':'/account/history','/user/profile':'/account/profile','/user/favorites':'/account/favorites','/user/cart':'/cart','/user/library':'/library','/user/login':'/login','/user/register':'/register'}).map(([source,destination])=>({source,destination,permanent:false})),
     {source:'/user/books/:path*',destination:'/books/:path*',permanent:false},
@@ -24,6 +25,7 @@ const nextConfig = {
       { source: '/api/:path*', destination: backend + '/api/:path*' },
       { source: '/admin', destination: backend + '/admin' },
       { source: '/admin/:path*', destination: backend + '/admin/:path*' },
+      { source: '/images/:path*', destination: backend + '/images/:path*' },
       { source: '/css/:path*', destination: backend + '/css/:path*' },
       { source: '/js/:path*', destination: backend + '/js/:path*' },
     ];

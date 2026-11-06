@@ -355,7 +355,7 @@ class BookCopyIntegrationTest {
         inventory.add(book.getId(),1);
         mvc.perform(get("/api/v1/notifications")).andExpect(jsonPath("$[0].type").value("BOOK_AVAILABLE"));
         mvc.perform(post("/api/v1/loans").contentType("application/json")
-            .content("{\"days\":14,\"items\":[{\"bookId\":"+book.getId()+",\"quantity\":1}]}"))
+            .content("{\"policyAccepted\":true,\"policyVersion\":\"2026-11-06-v1\",\"days\":14,\"items\":[{\"bookId\":"+book.getId()+",\"quantity\":1}]}"))
             .andExpect(status().isOk());
         assertTrue(reservations.findByUser_EmailOrderByCreatedAtAsc("copies@example.com").isEmpty());
     }
