@@ -10,6 +10,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -66,12 +68,17 @@ public class AuthService {
                 .build();
     }
 
+    @Autowired
+    private ApplicationEventPublisher events;
+
+    @Transactional
     public void changePassword(String email, String currentPassword, String newPassword) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản"));
+        User user = userRepository.findForUpdateByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản"));
         if (!passwordEncoder.matches(currentPassword, user.getPassword()))
             throw new org.springframework.security.authentication.BadCredentialsException("Mật khẩu hiện tại không đúng");
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+        events.publishEvent(ReaderEmail.passwordChanged(user.getEmail()));
     }
 
     public User register(RegisterRequest registerRequest) {

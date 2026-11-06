@@ -4,6 +4,7 @@ import com.example.library.dto.*;
 import com.example.library.repository.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.math.BigDecimal;
@@ -11,7 +12,8 @@ import java.time.*;
 @Service
 public class BorrowCheckoutService {
  private final BorrowPaymentRepository payments;private final UserRepository users;private final BookRepository books;private final BookCopyRepository copies;private final LoanService loans;private final VnpayGateway gateway;private final ObjectMapper json;
- public BorrowCheckoutService(BorrowPaymentRepository payments,UserRepository users,BookRepository books,BookCopyRepository copies,LoanService loans,VnpayGateway gateway,ObjectMapper json){this.payments=payments;this.users=users;this.books=books;this.copies=copies;this.loans=loans;this.gateway=gateway;this.json=json;}
+ private final ApplicationEventPublisher events;
+ public BorrowCheckoutService(BorrowPaymentRepository payments,UserRepository users,BookRepository books,BookCopyRepository copies,LoanService loans,VnpayGateway gateway,ObjectMapper json,ApplicationEventPublisher events){this.payments=payments;this.users=users;this.books=books;this.copies=copies;this.loans=loans;this.gateway=gateway;this.json=json;this.events=events;}
  private LocalDateTime now(){return LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));}
  private BigDecimal quote(LoanCreateRequest request){
   if(request.getDays()==null||request.getDays()<1||request.getDays()>365||request.getItems()==null||request.getItems().isEmpty()||request.getItems().size()>50)throw new IllegalArgumentException("Giỏ tối đa 50 đầu sách, thời hạn 1–365 ngày");
@@ -70,7 +72,9 @@ public class BorrowCheckoutService {
   LoanCreateRequest request;try{request=json.readValue(payment.getRequestJson(),LoanCreateRequest.class);}catch(Exception e){throw new IllegalStateException("Invalid stored order",e);}
   try{if(!payment.getUser().isEnabled()||quote(request).compareTo(payment.getAmount())!=0)throw new IllegalStateException("Tài khoản hoặc giá sách đã thay đổi");}
   catch(IllegalStateException|IllegalArgumentException e){payment.setStatus("REVIEW_REQUIRED");payment.setMessage("Đã nhận thanh toán nhưng chưa tạo phiếu: "+e.getMessage()+". Liên hệ thư viện để xử lý/hoàn tiền.");return reply("00","Confirmed for review");}
-  var loan=loans.createForUser(request,payment.getUser().getEmail());payment.setLoanId(loan.getId());payment.setStatus("PAID");payment.setMessage("Đã thanh toán và tạo phiếu #"+loan.getId());return reply("00","Confirmed");
+  var loan=loans.createForUser(request,payment.getUser().getEmail());payment.setLoanId(loan.getId());payment.setStatus("PAID");payment.setMessage("Đã thanh toán và tạo phiếu #"+loan.getId());
+  events.publishEvent(ReaderEmail.paymentConfirmed(payment.getUser().getEmail(), payment.getId(), payment.getAmount(), loan.getId()));
+  return reply("00","Confirmed");
  }
 
  @Transactional public BorrowPayment preparePayos(String email,LoanCreateRequest request,String key){
@@ -107,5 +111,6 @@ public class BorrowCheckoutService {
   try{if(!p.getUser().isEnabled()||quote(request).compareTo(p.getAmount())!=0)throw new IllegalStateException("Tài khoản hoặc phí sách đã thay đổi");}
   catch(IllegalStateException|IllegalArgumentException e){p.setStatus("REVIEW_REQUIRED");p.setMessage("Đã nhận tiền nhưng sách hoặc tài khoản không còn đủ điều kiện. Liên hệ thư viện để xử lý/hoàn tiền.");return;}
   var loan=loans.createForUser(request,p.getUser().getEmail());p.setLoanId(loan.getId());p.setStatus("PAID");p.setMessage("Đã chuyển khoản và tạo phiếu #"+loan.getId());
+  events.publishEvent(ReaderEmail.paymentConfirmed(p.getUser().getEmail(), p.getId(), p.getAmount(), loan.getId()));
  }
 }

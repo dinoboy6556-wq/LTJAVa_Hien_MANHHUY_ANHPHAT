@@ -46,8 +46,8 @@ INSERT INTO categories (name, description) VALUES
 
 -- Chèn Tác giả
 INSERT INTO authors (name, biography) VALUES 
-('Robert C. Martin', 'Tác giả của cuốn sách Clean Code nổi tiếng'),
-('Tô Hoài', 'Nhà văn lớn của văn học Việt Nam Modern');
+('Robert C. Martin', 'Robert C. Martin, còn gọi là Uncle Bob, là tác giả và nhà tư vấn phần mềm. Ông viết Clean Code, The Clean Coder và Clean Architecture.'),
+('Tô Hoài', 'Tô Hoài (1920–2014), tên khai sinh Nguyễn Sen, là nhà văn Việt Nam. Ông được biết đến qua Dế Mèn phiêu lưu ký, Truyện Tây Bắc và Cát bụi chân ai.');
 
 -- Chèn Nhà xuất bản
 INSERT INTO publishers (name, address, phone) VALUES 
