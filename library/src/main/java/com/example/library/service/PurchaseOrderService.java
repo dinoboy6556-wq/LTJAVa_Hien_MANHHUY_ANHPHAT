@@ -19,7 +19,8 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class PurchaseOrderService {
     public record View(Long id, Long bookId, String title, String buyerEmail, int quantity,
-                       BigDecimal unitPrice, BigDecimal total, Status status, LocalDateTime createdAt, Long saleId) {}
+                       BigDecimal unitPrice, BigDecimal total, Status status, LocalDateTime createdAt, Long saleId,
+                       String buyerName, String buyerPhone, String buyerAddress) {}
 
     private final PurchaseOrderRepository orders;
     private final UserRepository users;
@@ -105,6 +106,7 @@ public class PurchaseOrderService {
     private View view(PurchaseOrder order) {
         return new View(order.getId(), order.getBook().getId(), order.getBook().getTitle(), order.getUser().getEmail(),
                 order.getQuantity(), order.getUnitPrice(), order.getUnitPrice().multiply(BigDecimal.valueOf(order.getQuantity())),
-                order.getStatus(), order.getCreatedAt(), order.getSale() == null ? null : order.getSale().getId());
+                order.getStatus(), order.getCreatedAt(), order.getSale() == null ? null : order.getSale().getId(),
+                order.getUser().getFullName(), order.getUser().getPhone(), order.getUser().getAddress());
     }
 }

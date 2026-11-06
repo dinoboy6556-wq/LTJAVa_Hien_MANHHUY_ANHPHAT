@@ -11,6 +11,9 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public interface LoanRepository extends JpaRepository<Loan, Long> {
+    @Query("select count(l) > 0 from Loan l join l.items i where l.user.email = :email and i.book.id = :bookId")
+    boolean hasBookActivity(@org.springframework.data.repository.query.Param("email") String email, @org.springframework.data.repository.query.Param("bookId") Long bookId);
+
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("select l from Loan l where l.id = :id")
     java.util.Optional<Loan> findForUpdate(@Param("id") Long id);

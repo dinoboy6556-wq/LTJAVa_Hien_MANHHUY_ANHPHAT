@@ -64,6 +64,8 @@ export default function BorrowActions({ book, compact = false }) {
     </div>
     {Number(book.salePrice) > 0 && book.availableQuantity > 0 &&
       <Link className="secondary-button purchase-link" href={'/buy/' + book.id}>Mua sách</Link>}
+    {compact && Number(book.salePrice) > 0 && book.availableQuantity <= 0 &&
+      <button className="secondary-button purchase-link" disabled>Mua sách</button>}
     <p className="action-feedback" role="status">{message}</p>
   </div>;
 }

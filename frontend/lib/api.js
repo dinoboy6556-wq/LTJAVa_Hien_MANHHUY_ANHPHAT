@@ -27,6 +27,10 @@ export async function apiRequest(path, options = {}) {
 }
 
 export const api = {
+  reviewEligibility: id => apiRequest('/books/' + id + '/reviews/eligibility'),
+  questions: id => apiRequest('/books/' + id + '/questions'),
+  askQuestion: (id, question) => apiRequest('/books/' + id + '/questions', { method: 'POST', body: JSON.stringify({ question }) }),
+  recordReading: slug => apiRequest('/content/read/' + encodeURIComponent(slug) + '/record', { method: 'POST' }),
   libraryChat: (message, history) => apiRequest('/library-chat', { method: 'POST', body: JSON.stringify({ message, history }) }),
   purchases: () => apiRequest('/purchase-orders/my'),
   purchase: body => apiRequest('/purchase-orders', { method: 'POST', body: JSON.stringify(body) }),
