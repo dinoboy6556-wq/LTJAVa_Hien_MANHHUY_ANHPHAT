@@ -17,6 +17,15 @@ public record ReaderEmail(String recipient, String subject, String body) {
                 """.formatted(reference, total, loanId));
     }
 
+    static ReaderEmail passwordResetCode(String recipient, String code) {
+        return new ReaderEmail(recipient, "Mộc Library | Mã đặt lại mật khẩu", """
+                Mã xác nhận của bạn là %s.
+
+                Mã có hiệu lực trong 10 phút. Hãy nhập mã này trên trang Quên mật khẩu của Thư viện Mộc.
+                Nếu bạn không yêu cầu đặt lại mật khẩu, bạn có thể bỏ qua email này.
+                """.formatted(code));
+    }
+
     static ReaderEmail passwordChanged(String recipient) {
         return new ReaderEmail(recipient, "Mộc Library | Mật khẩu đã được thay đổi", """
                 Mật khẩu tài khoản của bạn tại Thư viện Mộc vừa được thay đổi thành công.

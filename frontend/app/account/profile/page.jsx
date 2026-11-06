@@ -15,7 +15,7 @@ async function loadProfile(){
 }
 export default function Profile(){
  const {data,error,setData,reload,busy}=useAccount(loadProfile);
- return <main className="container utility-page profile-page"><nav className="breadcrumb"><Link href="/">Trang chủ</Link><span>/</span><b>Hồ sơ cá nhân</b></nav><div className="profile-heading"><div><span className="eyebrow">GÓC CỦA BẠN</span><h1>Hồ sơ cá nhân</h1><p>Quản lý thông tin và theo dõi hành trình đọc tại Mộc.</p></div><button className="secondary-button" onClick={reload} disabled={busy}>{busy?'Đang cập nhật…':'Làm mới tổng quan'}</button></div><AccountState data={data} error={error}/>{data&&<ProfileContent data={data} onSave={profile=>setData(current=>({...current,profile}))}/>}</main>;
+ return <main className="container utility-page profile-page"><nav className="breadcrumb"><Link href="/">Trang chủ</Link><span>/</span><b>Hồ sơ cá nhân</b></nav><div className="profile-heading"><div><span className="eyebrow">GÓC CỦA BẠN</span><h1>Hồ sơ cá nhân</h1><p>Quản lý thông tin và theo dõi hành trình đọc tại Mộc.</p></div><button className="secondary-button" onClick={reload} disabled={busy}>{busy?'Đang cập nhật…':'Làm mới tổng quan'}</button></div><p><Link href="/account/purchases" className="secondary-button">Đơn mua sách</Link></p><AccountState data={data} error={error}/>{data&&<ProfileContent data={data} onSave={profile=>setData(current=>({...current,profile}))}/>}</main>;
 }
 function ProfileContent({data,onSave}){
  const {profile,loans,favorites,fines,payments,reservations}=data;

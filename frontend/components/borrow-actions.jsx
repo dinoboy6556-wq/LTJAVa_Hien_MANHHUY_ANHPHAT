@@ -62,6 +62,8 @@ export default function BorrowActions({ book, compact = false }) {
         {(book.availableQuantity <= 0 || reserved) && <button disabled={busy} onClick={() => run(async () => { await (reserved ? api.cancelReservation(book.id) : api.reserve(book.id)); setReserved(!reserved); setMessage(reserved ? 'Đã hủy đăng ký.' : 'Đã đăng ký chờ, sách chưa được giữ riêng.'); })}>{reserved ? 'Hủy đăng ký chờ' : 'Đăng ký chờ sách'}</button>}
       </>}
     </div>
+    {Number(book.salePrice) > 0 && book.availableQuantity > 0 &&
+      <Link className="secondary-button purchase-link" href={'/buy/' + book.id}>Mua sách</Link>}
     <p className="action-feedback" role="status">{message}</p>
   </div>;
 }

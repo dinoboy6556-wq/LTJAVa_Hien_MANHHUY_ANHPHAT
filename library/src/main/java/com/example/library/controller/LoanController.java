@@ -31,7 +31,7 @@ public class LoanController {
 
     @PostMapping
     public ResponseEntity<Loan> createLoan(@Valid @RequestBody LoanCreateRequest request) {
-        com.example.library.service.BorrowingPolicy.requireAcceptance(request);
+        com.example.library.service.BorrowingPolicy.requireAcceptance(request);request.setDailyPricing(true);
         return ResponseEntity.ok(loanService.createLoan(request));
     }
 

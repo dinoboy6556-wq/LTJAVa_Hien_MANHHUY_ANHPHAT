@@ -12,7 +12,10 @@ public final class RentalPricing {
         return (days + DAYS_PER_PERIOD - 1) / DAYS_PER_PERIOD;
     }
 
-    public static BigDecimal pricePerCopy(BigDecimal basePrice, int days) {
-        return basePrice.multiply(BigDecimal.valueOf(periodsFor(days)));
+    public static BigDecimal pricePerCopy(BigDecimal basePrice, int days, boolean dailyPricing) {
+        int periods = periodsFor(days);
+        if (!dailyPricing) return basePrice.multiply(BigDecimal.valueOf(periods));
+        return basePrice.multiply(BigDecimal.valueOf(days))
+                .divide(BigDecimal.valueOf(DAYS_PER_PERIOD), 0, java.math.RoundingMode.CEILING);
     }
 }

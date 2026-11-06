@@ -15,6 +15,15 @@ public class BorrowCheckoutService {
  private final ApplicationEventPublisher events;
  public BorrowCheckoutService(BorrowPaymentRepository payments,UserRepository users,BookRepository books,BookCopyRepository copies,LoanService loans,VnpayGateway gateway,ObjectMapper json,ApplicationEventPublisher events){this.payments=payments;this.users=users;this.books=books;this.copies=copies;this.loans=loans;this.gateway=gateway;this.json=json;this.events=events;}
  private LocalDateTime now(){return LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));}
+ private boolean matchesOrder(BorrowPayment payment, LoanCreateRequest request) {
+  try {
+   var saved = json.readValue(payment.getRequestJson(), LoanCreateRequest.class);
+   saved.setDailyPricing(request.isDailyPricing());
+   return saved.equals(request);
+  } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+   return false;
+  }
+ }
  private BigDecimal quote(LoanCreateRequest request){
   if(request.getDays()==null||request.getDays()<1||request.getDays()>365||request.getItems()==null||request.getItems().isEmpty()||request.getItems().size()>50)throw new IllegalArgumentException("Giỏ tối đa 50 đầu sách, thời hạn 1–365 ngày");
   var counts=new TreeMap<Long,Integer>();for(var item:request.getItems()){if(item==null||item.getBookId()==null||item.getQuantity()==null||item.getQuantity()<1||item.getQuantity()>100)throw new IllegalArgumentException("Số lượng không hợp lệ");counts.merge(item.getBookId(),item.getQuantity(),Math::addExact);}
@@ -22,7 +31,7 @@ public class BorrowCheckoutService {
   for(var entry:counts.entrySet()){var book=books.findForUpdate(entry.getKey()).orElseThrow(()->new IllegalArgumentException("Sách không còn tồn tại"));
    if(copies.countByBookIdAndStatus(book.getId(),BookCopyStatus.AVAILABLE)<entry.getValue())throw new IllegalStateException("Không đủ quyển: "+book.getTitle());
    if(book.getRentalPrice()==null||book.getRentalPrice().signum()<0)throw new IllegalStateException("Phí sách không hợp lệ");
-   total=total.add(RentalPricing.pricePerCopy(book.getRentalPrice(),request.getDays()).multiply(BigDecimal.valueOf(entry.getValue())));
+   total=total.add(RentalPricing.pricePerCopy(book.getRentalPrice(),request.getDays(),request.isDailyPricing()).multiply(BigDecimal.valueOf(entry.getValue())));
   }return total;
  }
  @Transactional public Map<String,Object> checkout(String email,LoanCreateRequest request,String key,String ip){
@@ -32,7 +41,7 @@ public class BorrowCheckoutService {
   String payload;try{payload=json.writeValueAsString(request);}catch(Exception e){throw new IllegalArgumentException("Giỏ không hợp lệ");}
   var existing=payments.findByUser_IdAndRequestKey(user.getId(),key);
   BorrowPayment payment;
-  if(existing.isPresent()){payment=existing.get();if(!"VNPAY".equals(payment.getMethod())||!payment.getRequestJson().equals(payload))throw new IllegalStateException("Mã yêu cầu đã dùng cho giỏ khác");if(!payment.getStatus().equals("PENDING")||!payment.getExpiresAt().isAfter(now()))throw new IllegalStateException("Giao dịch đã xử lý/hết hạn. Kiểm tra danh sách thanh toán trước khi tạo lại.");}
+  if(existing.isPresent()){payment=existing.get();if(!"VNPAY".equals(payment.getMethod())||!matchesOrder(payment,request))throw new IllegalStateException("Mã yêu cầu đã dùng cho giỏ khác");if(!payment.getStatus().equals("PENDING")||!payment.getExpiresAt().isAfter(now()))throw new IllegalStateException("Giao dịch đã xử lý/hết hạn. Kiểm tra danh sách thanh toán trước khi tạo lại.");}
   else{if(payments.findByUser_EmailOrderByCreatedAtDesc(email).stream().anyMatch(p -> p.getStatus().equals("PENDING") && p.getExpiresAt().isAfter(now())))throw new IllegalStateException("Bạn đang có giao dịch chờ xác nhận. Kiểm tra giao dịch trước khi thanh toán lại.");
    BigDecimal amount=quote(request);if(amount.compareTo(BigDecimal.valueOf(5000))<0||amount.compareTo(new BigDecimal("999999999"))>0||amount.stripTrailingZeros().scale()>0)throw new IllegalArgumentException("VNPay yêu cầu tổng phí từ 5.000 đ, số tiền VND nguyên");
    payment=new BorrowPayment();payment.setId(UUID.randomUUID().toString().replace("-",""));payment.setUser(user);payment.setRequestKey(key);payment.setRequestJson(payload);payment.setAmount(amount);payment.setStatus("PENDING");payment.setCreatedAt(now());payment.setExpiresAt(now().plusMinutes(15));payment.setMessage("Chờ xác nhận từ VNPay");payments.save(payment);}
@@ -45,7 +54,7 @@ public class BorrowCheckoutService {
   String payload;try{payload=json.writeValueAsString(request);}catch(Exception e){throw new IllegalArgumentException("Giỏ không hợp lệ");}
   var existing=payments.findByUser_IdAndRequestKey(user.getId(),key);
   if(existing.isPresent()){
-   var p=existing.get();if(!"CASH".equals(p.getMethod())||!payload.equals(p.getRequestJson()))throw new IllegalStateException("Mã yêu cầu đã dùng cho giỏ hoặc phương thức khác");
+   var p=existing.get();if(!"CASH".equals(p.getMethod())||!matchesOrder(p,request))throw new IllegalStateException("Mã yêu cầu đã dùng cho giỏ hoặc phương thức khác");
    return Map.of("id",p.getId(),"loanId",p.getLoanId(),"amount",p.getAmount());
   }
   if(payments.findByUser_EmailOrderByCreatedAtDesc(email).stream().anyMatch(p->"PENDING".equals(p.getStatus())&&("PAYOS".equals(p.getMethod())||p.getExpiresAt().isAfter(now()))))throw new IllegalStateException("Bạn đang có giao dịch chuyển khoản chờ xác nhận. Kiểm tra trước khi đặt lại tại quầy.");
@@ -82,7 +91,7 @@ public class BorrowCheckoutService {
   var user=users.findForUpdateByEmail(email).orElseThrow();if(!user.isEnabled())throw new IllegalStateException("Tài khoản đã bị khóa");
   String payload;try{payload=json.writeValueAsString(request);}catch(Exception e){throw new IllegalArgumentException("Giỏ không hợp lệ");}
   var old=payments.findByUser_IdAndRequestKey(user.getId(),key);
-  if(old.isPresent()){var p=old.get();if(!"PAYOS".equals(p.getMethod())||!payload.equals(p.getRequestJson()))throw new IllegalStateException("Mã yêu cầu đã dùng cho giỏ khác");if(!"PENDING".equals(p.getStatus()))throw new IllegalStateException("Giao dịch đã xử lý. Kiểm tra trạng thái trước khi tạo lại.");return p;}
+  if(old.isPresent()){var p=old.get();if(!"PAYOS".equals(p.getMethod())||!matchesOrder(p,request))throw new IllegalStateException("Mã yêu cầu đã dùng cho giỏ khác");if(!"PENDING".equals(p.getStatus()))throw new IllegalStateException("Giao dịch đã xử lý. Kiểm tra trạng thái trước khi tạo lại.");return p;}
   if(payments.findByUser_EmailOrderByCreatedAtDesc(email).stream().anyMatch(p->"PENDING".equals(p.getStatus())))throw new IllegalStateException("Bạn còn giao dịch chờ xác nhận. Hãy kiểm tra trạng thái trước khi tạo giao dịch mới.");
   var amount=quote(request);if(amount.signum()<=0||amount.compareTo(new BigDecimal("999999999"))>0||amount.stripTrailingZeros().scale()>0)throw new IllegalArgumentException("Chuyển khoản yêu cầu số tiền VND nguyên từ 1 đến 999.999.999 đ");
   var p=new BorrowPayment();p.setId("PO"+new java.math.BigInteger(UUID.randomUUID().toString().replace("-",""),16).mod(new java.math.BigInteger("8000000000000000")).add(java.math.BigInteger.ONE));p.setUser(user);p.setRequestKey(key);p.setRequestJson(payload);p.setAmount(amount);p.setMethod("PAYOS");p.setStatus("PENDING");p.setCreatedAt(now());p.setExpiresAt(now().plusMinutes(15));p.setMessage("Chờ xác nhận chuyển khoản ngân hàng");return payments.saveAndFlush(p);

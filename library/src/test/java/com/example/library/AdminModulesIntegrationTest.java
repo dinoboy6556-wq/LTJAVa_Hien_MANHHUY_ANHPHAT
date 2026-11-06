@@ -31,4 +31,27 @@ class AdminModulesIntegrationTest {
   for(String path:java.util.List.of("/api/v1/admin/users","/api/v1/payments","/api/v1/sales","/api/v1/fines","/api/v1/statistics/summary","/api/v1/admin/reports/books.csv","/api/v1/content/manage/POST","/api/v1/content/manage/PAGE","/api/v1/content/manage/CONFIG","/api/v1/content/manage/MENU")){mvc.perform(get(path)).andExpect(status().isForbidden());}
   mvc.perform(post("/api/v1/sales/counter").contentType(MediaType.APPLICATION_JSON).content(counter(1L,1,true))).andExpect(status().isForbidden());mvc.perform(post("/api/v1/fines/1/mark-paid")).andExpect(status().isForbidden());
  }
+
+ @Test @WithMockUser(username="buyer@test.com",roles="USER")
+ void readerOrdersAtCounterAndAdminCanConfirmOnlyOnce() throws Exception {
+  var b=book();
+  var payload=json.writeValueAsString(java.util.Map.of("bookId",b.getId(),"quantity",2,"unitPrice",60000,
+          "requestKey","12345678-1234-1234-1234-123456789012"));
+  var create=post("/api/v1/purchase-orders").contentType(MediaType.APPLICATION_JSON).content(payload);
+  var response=mvc.perform(create).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("PENDING")).andReturn();
+  long id=json.readTree(response.getResponse().getContentAsString()).get("id").asLong();
+  mvc.perform(create).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(id));
+  mvc.perform(get("/api/v1/purchase-orders/my")).andExpect(jsonPath("$.length()").value(1));
+  assertEquals(0,sales.count());
+  assertEquals(3,copies.countByBookIdAndStatus(b.getId(),BookCopyStatus.AVAILABLE));
+
+  var confirmation=post("/api/v1/purchase-orders/"+id+"/confirm").contentType(MediaType.APPLICATION_JSON)
+          .content("{\"paymentCollected\":true}");
+  mvc.perform(confirmation).andExpect(status().isForbidden());
+  var admin=org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin@test.com").roles("ADMIN");
+  mvc.perform(confirmation.with(admin)).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("PAID"));
+  mvc.perform(confirmation.with(admin)).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("PAID"));
+  assertEquals(1,sales.count());
+  assertEquals(2,copies.countByBookIdAndStatus(b.getId(),BookCopyStatus.SOLD));
+ }
 }

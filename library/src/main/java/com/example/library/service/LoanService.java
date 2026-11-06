@@ -74,7 +74,7 @@ public class LoanService {
             Book book = copyService.lockBook(itemReq.getBookId());
             List<BookCopy> selected = copyService.take(book.getId(), itemReq.getQuantity(), BookCopyStatus.BORROWED);
 
-            BigDecimal pricePerCopy = RentalPricing.pricePerCopy(book.getRentalPrice(), days);
+            BigDecimal pricePerCopy = RentalPricing.pricePerCopy(book.getRentalPrice(), days, request.isDailyPricing());
             BigDecimal rentalFee = pricePerCopy.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalRentalFee = totalRentalFee.add(rentalFee);
 

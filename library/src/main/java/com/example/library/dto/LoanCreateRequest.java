@@ -17,4 +17,7 @@ public class LoanCreateRequest {
 
     private boolean policyAccepted;
     private String policyVersion;
+
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT)
+    private boolean dailyPricing;
 }

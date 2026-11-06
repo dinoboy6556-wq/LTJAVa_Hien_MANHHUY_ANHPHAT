@@ -2,6 +2,13 @@
 SET NAMES utf8mb4;
 USE library_db;
 SET FOREIGN_KEY_CHECKS=0;
+SET @reset_purchase_orders = IF(
+    EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'purchase_orders'),
+    'TRUNCATE TABLE purchase_orders', 'DO 0'
+);
+PREPARE reset_purchases FROM @reset_purchase_orders;
+EXECUTE reset_purchases;
+DEALLOCATE PREPARE reset_purchases;
 TRUNCATE TABLE `audit_logs`;
 TRUNCATE TABLE `authors`;
 TRUNCATE TABLE `book_copies`;

@@ -22,6 +22,27 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private com.example.library.service.PasswordRecoveryService recovery;
+
+    public record ForgotPasswordRequest(@NotBlank @jakarta.validation.constraints.Email @Size(max = 255) String email) {}
+    public record ResetPasswordRequest(@NotBlank @jakarta.validation.constraints.Email @Size(max = 255) String email,
+                                       @NotBlank @jakarta.validation.constraints.Pattern(regexp = "[0-9]{6}") String code,
+                                       @NotBlank @Size(min = 8, max = 72) String newPassword) {}
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request,
+                                              jakarta.servlet.http.HttpServletRequest http) {
+        recovery.requestCode(request.email(), http.getRemoteAddr());
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        recovery.reset(request.email(), request.code(), request.newPassword());
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
