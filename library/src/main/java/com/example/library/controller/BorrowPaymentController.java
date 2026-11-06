@@ -10,9 +10,13 @@ import jakarta.validation.Valid;
 import java.util.*;
 @RestController @RequestMapping("/api/v1/payments")
 public class BorrowPaymentController {
- private final BorrowCheckoutService service;private final BorrowPaymentRepository payments;
- public BorrowPaymentController(BorrowCheckoutService service,BorrowPaymentRepository payments){this.service=service;this.payments=payments;}
+ private final com.example.library.service.PayosPaymentService payos;private final BorrowCheckoutService service;private final BorrowPaymentRepository payments;
+ public BorrowPaymentController(BorrowCheckoutService service,BorrowPaymentRepository payments,com.example.library.service.PayosPaymentService payos){this.service=service;this.payments=payments;this.payos=payos;}
  @PostMapping("/checkout") public Map<String,Object> checkout(Authentication auth,@Valid @RequestBody LoanCreateRequest request,@RequestHeader("Idempotency-Key") String key,jakarta.servlet.http.HttpServletRequest http){return service.checkout(auth.getName(),request,key,http.getRemoteAddr());}
+ @PostMapping("/payos/checkout") public Map<String,Object> payosCheckout(Authentication auth,@Valid @RequestBody LoanCreateRequest request,@RequestHeader("Idempotency-Key") String key){return payos.create(auth.getName(),request,key);}
+ @PostMapping("/payos/{id}/resume") public Map<String,Object> resume(@PathVariable String id,Authentication auth){return payos.resume(id,auth.getName());}
+ @PostMapping("/payos/{id}/sync") public Map<String,String> sync(@PathVariable String id,Authentication auth){payos.sync(id,auth.getName());return Map.of("message","Đã cập nhật trạng thái");}
+ @PostMapping("/payos/webhook") public Map<String,String> webhook(@RequestBody com.fasterxml.jackson.databind.JsonNode body){payos.webhook(body);return Map.of("code","00","desc","success");}
  @PostMapping("/cash") public Map<String,Object> cash(Authentication auth,@Valid @RequestBody LoanCreateRequest request,@RequestHeader("Idempotency-Key") String key){return service.cashCheckout(auth.getName(),request,key);}
  @PostMapping("/{id}/confirm-cash") @PreAuthorize("hasRole('ADMIN')") public BorrowPayment confirmCash(@PathVariable String id,Authentication auth){return service.confirmCash(id,auth.getName());}
  @GetMapping("/my") public List<BorrowPayment> mine(Authentication auth){return payments.findByUser_EmailOrderByCreatedAtDesc(auth.getName());}

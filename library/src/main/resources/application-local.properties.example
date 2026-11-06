@@ -1,0 +1,9 @@
+# Copy to application-local.properties (gitignored), then fill locally.
+# Run: .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+app.payos.client-id=
+app.payos.api-key=
+app.payos.checksum-key=
+app.payos.return-url=http://localhost:3000/cart
+app.payos.cancel-url=http://localhost:3000/cart
+# Persistent random secret, at least 32 bytes. Never commit real values.
+# app.jwt.secret=

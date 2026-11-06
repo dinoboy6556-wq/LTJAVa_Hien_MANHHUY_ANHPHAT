@@ -34,6 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Lấy JWT từ header Authorization
             String jwt = getJwtFromRequest(request);
 
+            if(StringUtils.hasText(jwt)&&!tokenProvider.validateToken(jwt)){response.setStatus(401);response.setContentType("application/json;charset=UTF-8");response.getWriter().write("{\"message\":\"Phiên đăng nhập không hợp lệ hoặc đã hết hạn\"}");return;}
             // Kiểm tra token hợp lệ
             if (StringUtils.hasText(jwt)
                     && tokenProvider.validateToken(jwt)) {

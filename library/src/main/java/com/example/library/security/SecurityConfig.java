@@ -42,6 +42,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/h2-console/**").denyAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/payos/webhook").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn", "/api/v1/content/public", "/api/v1/content/catalog", "/api/v1/content/read/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/**", "/api/v1/categories/**", "/api/v1/authors/**").permitAll()
                         .requestMatchers(
@@ -55,12 +57,14 @@ public class SecurityConfig {
                                 "/admin",
                                 "/admin/login",
                                 "/api/v1/auth/**",
-                                "/h2-console/**",
                                 "/*.css",
                                 "/*.js")
                         .permitAll()
                         .anyRequest().authenticated())
-                .headers(headers -> headers.frameOptions(frame -> frame.disable()));
+                .exceptionHandling(errors -> errors.authenticationEntryPoint((request,response,error)->{response.setStatus(401);response.setContentType("application/json;charset=UTF-8");response.getWriter().write("{\"message\":\"Vui lÃ²ng Ä‘Äƒng nháº­p Ä‘á»ƒ tiáº¿p tá»¥c\"}");}))
+                .headers(headers -> headers.frameOptions(frame -> frame.deny())
+                    .contentSecurityPolicy(csp->csp.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"))
+                    .referrerPolicy(policy->policy.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN)));
 
         http.addFilterBefore(
                 jwtAuthenticationFilter(),

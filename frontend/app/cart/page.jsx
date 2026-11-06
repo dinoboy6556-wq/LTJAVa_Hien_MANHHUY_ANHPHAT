@@ -2,12 +2,12 @@
 import BorrowSteps from '../../components/borrow-steps';
 import { useState, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Banknote, BookOpen, CheckCircle2, Clock3, CreditCard, Minus, Plus, RefreshCw, ShieldCheck, ShoppingBag, Trash2, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Banknote, BookOpen, CheckCircle2, Clock3, CreditCard, Minus, Plus, RefreshCw, ShieldCheck, ShoppingBag, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { readCart, saveCart, cartKey, checkoutAttempt, clearMatchedCart } from '../../lib/cart';
 import { useAccount, AccountState, money } from '../../components/account-data';
 
-const statuses = { PENDING: 'Đang chờ VNPay xác nhận', UNPAID: 'Chờ thanh toán tại quầy', PAID: 'Đã thanh toán', FAILED: 'Giao dịch không thành công', REVIEW_REQUIRED: 'Đã nhận tiền — cần thư viện xử lý' };
+const statuses = { PENDING: 'Chờ xác nhận chuyển khoản', UNPAID: 'Chờ thanh toán tại quầy', PAID: 'Đã thanh toán', FAILED: 'Giao dịch không thành công', REVIEW_REQUIRED: 'Đã nhận tiền — cần thư viện xử lý' };
 async function loadCart() {
   const [profile, books, payments] = await Promise.all([api.profile(), api.books(), api.payments()]);
   return { profile, books, payments };
@@ -41,8 +41,10 @@ function CartBody({ initial }) {
   const copies = items.reduce((sum, item) => sum + item.quantity, 0);
   const pendingPayment = payments.some(payment => payment.status === 'PENDING');
 
-  async function refresh() {
+  async function refresh(options = {}) {
     try {
+      const current = await api.payments();
+      await Promise.all(current.filter(p => p.method === 'PAYOS' && p.status === 'PENDING').map(p => api.syncPayment(p.id)));
       const list = await api.payments();
       setPayments(list);
       let attempt;
@@ -52,8 +54,16 @@ function CartBody({ initial }) {
         if (clearMatchedCart(email, JSON.parse(attempt.payload).items)) setItems([]);
         localStorage.removeItem(cartKey(email) + ':checkout');
       }
-      setMessage('Đã cập nhật trạng thái thanh toán.');
+      if (!options.preserveMessage) setMessage('Đã cập nhật trạng thái thanh toán.');
     } catch (error) { setMessage(error.message); }
+  }
+
+  async function resumePayment(id) {
+    if (lock.current) return;
+    lock.current = true; setBusy(true); setMessage('');
+    try { const result = await api.resumePayment(id); const url = new URL(result.url); if (url.protocol !== 'https:' || url.hostname !== 'pay.payos.vn') throw Error('Liên kết chuyển khoản không hợp lệ.'); window.location.assign(url.href); }
+    catch (error) { setMessage(error.message); }
+    finally { lock.current = false; setBusy(false); }
   }
 
   async function checkout() {
@@ -64,7 +74,7 @@ function CartBody({ initial }) {
       const payload = JSON.stringify({ days, items });
       const attempt = checkoutAttempt(email, payload, method);
       const result = await api.checkout(method, JSON.parse(payload), attempt.id);
-      if (method === 'VNPAY') {
+      if (method === 'PAYOS') {
         const url = new URL(result.url);
         if (url.protocol !== 'https:') throw Error('Địa chỉ thanh toán không hợp lệ.');
         window.location.assign(url.href);
@@ -72,7 +82,7 @@ function CartBody({ initial }) {
       }
       if (clearMatchedCart(email, items)) setItems([]);
       setMessage(`Đã tạo phiếu #${result.loanId}. Thanh toán ${money(result.amount)} tại thư viện.`);
-      await refresh();
+      await refresh({ preserveMessage: true });
     } catch (error) { setMessage(error.message); }
     finally { lock.current = false; setBusy(false); }
   }
@@ -104,7 +114,7 @@ function CartBody({ initial }) {
       <aside className="cart-checkout-panel">
         <div className="cart-panel-heading"><div><span className="eyebrow">TÓM TẮT</span><h2>Thông tin mượn</h2></div></div>
         <label className="cart-form-field"><span><Clock3 size={15}/> Thời hạn mượn</span><select value={days} disabled={busy} onChange={event => setDays(Number(event.target.value))}>{Array.from({ length: 26 }, (_, index) => (index + 1) * 14).map(value => <option key={value} value={value}>{value} ngày · {value / 14} chu kỳ</option>)}</select><small>{billingPeriods} chu kỳ tính phí × 14 ngày; mỗi chu kỳ tính trọn phí.</small></label>
-        <fieldset className="cart-payment-options"><legend>Phương thức thanh toán</legend><label className={method === 'CASH' ? 'payment-option selected' : 'payment-option'}><input type="radio" name="payment" value="CASH" checked={method === 'CASH'} disabled={busy} onChange={() => setMethod('CASH')}/><span className="payment-method-icon"><Banknote size={18}/></span><span><b>Thanh toán tại thư viện</b><small>Thanh toán trực tiếp tại quầy</small></span><i/></label><label className={method === 'VNPAY' ? 'payment-option selected' : 'payment-option'}><input type="radio" name="payment" value="VNPAY" checked={method === 'VNPAY'} disabled={busy} onChange={() => setMethod('VNPAY')}/><span className="payment-method-icon"><CreditCard size={18}/></span><span><b>VNPay</b><small>Chuyển đến cổng thanh toán an toàn</small></span><i/></label></fieldset>
+        <fieldset className="cart-payment-options"><legend>Phương thức thanh toán</legend><label className={method === 'CASH' ? 'payment-option selected' : 'payment-option'}><input type="radio" name="payment" value="CASH" checked={method === 'CASH'} disabled={busy} onChange={() => setMethod('CASH')}/><span className="payment-method-icon"><Banknote size={18}/></span><span><b>Thanh toán tại thư viện</b><small>Thanh toán trực tiếp tại quầy</small></span><i/></label><label className={method === 'PAYOS' ? 'payment-option selected' : 'payment-option'}><input type="radio" name="payment" value="PAYOS" checked={method === 'PAYOS'} disabled={busy} onChange={() => setMethod('PAYOS')}/><span className="payment-method-icon"><CreditCard size={18}/></span><span><b>Chuyển khoản ngân hàng</b><small>Chuyển đến cổng thanh toán an toàn</small></span><i/></label></fieldset>
         <div className="cart-total-lines"><div><span>{copies} quyển sách</span><strong>{money(total)}</strong></div><div><span>Thời hạn</span><strong>{days} ngày</strong></div><div><span>Chu kỳ tính phí</span><strong>{billingPeriods} × 14 ngày</strong></div></div>
         <div className="cart-total"><span>Tổng phí mượn</span><strong>{money(total)}</strong></div>
         {!valid && items.length > 0 && <p className="cart-validation" role="alert">Có sách không đủ số lượng hoặc không còn khả dụng. Vui lòng chỉnh lại giỏ.</p>}
@@ -116,8 +126,7 @@ function CartBody({ initial }) {
 
     <section className="payment-history">
       <header><div><span className="eyebrow">LỊCH SỬ GIAO DỊCH</span><h2>Theo dõi thanh toán</h2><p>Trạng thái giao dịch được đồng bộ trực tiếp từ máy chủ.</p></div><button className="secondary-button" disabled={busy} onClick={refresh}><RefreshCw size={15}/> Kiểm tra trạng thái</button></header>
-      {payments.length ? <div className="payment-list">{payments.map(payment => <article className="payment-row" key={payment.id}><span className="payment-method-icon">{payment.method === 'CASH' ? <Banknote size={19}/> : <CreditCard size={19}/>}</span><div className="payment-row-info"><b>{payment.method === 'CASH' ? 'Thanh toán tại thư viện' : 'Thanh toán VNPay'}</b><small>Mã giao dịch {payment.transactionNo || payment.id} · {payment.createdAt ? new Date(payment.createdAt).toLocaleString('vi-VN') : 'Thời gian chưa cập nhật'}</small></div><strong>{money(payment.amount)}</strong><span className={'payment-status ' + (payment.status === 'PAID' ? 'payment-status-done' : payment.status === 'FAILED' ? 'payment-status-failed' : 'payment-status-wait')}>{statuses[payment.status] || payment.status}</span>{payment.loanId && <Link href="/account/loans">Phiếu #{payment.loanId}</Link>}</article>)}</div> : <div className="payment-empty"><CheckCircle2 size={18}/><span>Chưa có giao dịch thanh toán nào.</span></div>}
-      {message && !message.startsWith('Đã tạo') && <p className="payment-refresh-message" role="status">{message}</p>}
+      {payments.length ? <div className="payment-list">{payments.map(payment => <article className="payment-row" key={payment.id}><span className="payment-method-icon">{payment.method === 'CASH' ? <Banknote size={19}/> : <CreditCard size={19}/>}</span><div className="payment-row-info"><b>{payment.method === 'CASH' ? 'Thanh toán tại thư viện' : 'Chuyển khoản ngân hàng'}</b><small>Mã giao dịch {payment.transactionNo || payment.id} · {payment.createdAt ? new Date(payment.createdAt).toLocaleString('vi-VN') : 'Thời gian chưa cập nhật'}</small></div><strong>{money(payment.amount)}</strong><span className={'payment-status ' + (payment.status === 'PAID' ? 'payment-status-done' : payment.status === 'FAILED' ? 'payment-status-failed' : 'payment-status-wait')}>{statuses[payment.status] || payment.status}</span>{payment.method === 'PAYOS' && payment.status === 'PENDING' && <button className="secondary-button" disabled={busy} onClick={() => resumePayment(payment.id)}>Tiếp tục chuyển khoản</button>}{payment.loanId && <Link href="/account/loans">Phiếu #{payment.loanId}</Link>}</article>)}</div> : <div className="payment-empty"><CheckCircle2 size={18}/><span>Chưa có giao dịch thanh toán nào.</span></div>}
     </section>
   </>;
 }

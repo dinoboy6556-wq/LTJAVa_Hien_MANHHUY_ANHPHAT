@@ -5,9 +5,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const today = () => new Date().toLocaleDateString('sv-SE');
   const loanStatus = loan => loan.status === 'BORROWED' && loan.dueDate < today() ? 'OVERDUE' : loan.status;
   const labels = {AVAILABLE:'Còn sách',OUT_OF_STOCK:'Hết sách',BORROWED:'Đang mượn',RETURNED:'Đã trả',OVERDUE:'Quá hạn',DAMAGED:'Hỏng',LOST:'Mất',SOLD:'Đã bán',UNAVAILABLE:'Chưa sẵn sàng',paid:'Đã thanh toán',unpaid:'Chưa thanh toán',enabled:'Hoạt động',disabled:'Đã khóa'};
-  const titles = {overview:'Tổng quan',books:'Sách & tồn kho',loans:'Phiếu mượn',fines:'Khoản phạt',sales:'Bán sách & hóa đơn',users:'Tài khoản',payments:'Thanh toán mượn',categories:'Thể loại sách',authors:'Tác giả',publishers:'Nhà xuất bản',ebooks:'Sách điện tử',posts:'Bài viết & tin thư viện',pages:'Trang thông tin',config:'Cấu hình thư viện',menus:'Menu điều hướng',reports:'Báo cáo'};
+  const titles = {overview:'Tổng quan',categories:'Thể loại sách',books:'Sách & tồn kho',publishers:'Nhà xuất bản',authors:'Tác giả',loans:'Phiếu mượn',fines:'Khoản phạt',sales:'Bán sách & hóa đơn',payments:'Thanh toán mượn',users:'Tài khoản',ebooks:'Sách điện tử',posts:'Bài viết & tin thư viện',pages:'Trang thông tin',config:'Cấu hình thư viện',menus:'Menu điều hướng',reports:'Báo cáo'};
   const endpoints = {books:'/api/v1/books',loans:'/api/v1/loans',fines:'/api/v1/fines',sales:'/api/v1/sales',users:'/api/v1/admin/users',payments:'/api/v1/payments'};
-  const columns = {payments:['Mã giao dịch','Email','Mã VNPay','Số tiền','Phương thức','Trạng thái','Mã phiếu','Chi tiết','Thao tác'],books:['Sách','Tác giả','Thể loại','Còn trong kho','Tổng quyển','Phí mượn / 14 ngày','Giá bán','Thao tác'],loans:['Mã phiếu','Độc giả','Email','Sách','Số quyển','Mã quyển','Ngày mượn','Hạn trả','Trạng thái','Thao tác'],fines:['Mã phạt','Email độc giả','Phiếu','Lý do','Số tiền','Trạng thái','Thao tác'],sales:['Hóa đơn','Người mua','Ngày tạo','Sách','Tổng tiền'],users:['Họ tên','Email','Điện thoại','Địa chỉ','Quyền','Trạng thái','Thao tác']};
+  const columns = {payments:['Mã giao dịch','Email','Mã ngân hàng','Số tiền','Phương thức','Trạng thái','Mã phiếu','Chi tiết','Thao tác'],books:['Ảnh bìa','Sách','Tác giả','Thể loại','Còn trong kho','Tổng quyển','Phí mượn / 14 ngày','Giá bán','Thao tác'],loans:['Mã phiếu','Độc giả','Email','Sách','Số quyển','Mã quyển','Ngày mượn','Hạn trả','Trạng thái','Thao tác'],fines:['Mã phạt','Email độc giả','Phiếu','Lý do','Số tiền','Trạng thái','Thao tác'],sales:['Hóa đơn','Người mua','Ngày tạo','Sách','Tổng tiền'],users:['Họ tên','Email','Điện thoại','Địa chỉ','Quyền','Trạng thái','Thao tác']};
   const taxonomy={categories:['description','Mô tả'],authors:['biography','Tiểu sử'],publishers:['address','Địa chỉ']};
   const contentKinds={ebooks:'EBOOK',posts:'POST',pages:'PAGE',config:'CONFIG',menus:'MENU'};
   for(const key of Object.keys(taxonomy)){endpoints[key]='/api/v1/'+key;columns[key]=['Tên',taxonomy[key][1],'Thao tác'];}
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const target=section,body=openDialog((row.id?'Sửa ':'Thêm ')+titles[target]),form=el('form',null,'admin-form');body.append(form);
     const title=field(form,'Tên / tiêu đề','text',row.name||row.title||'');title.required=true;title.maxLength=255;
     if(taxonomy[target]){
-      const [property,label]=taxonomy[target],description=field(form,label,'text',row[property]||'');const phone=target==='publishers'?field(form,'Điện thoại','text',row.phone||''):null;
+      const [property,label]=taxonomy[target],description=field(form,label,'text',row[property]||'');description.maxLength=255;const phone=target==='publishers'?field(form,'Điện thoại','tel',row.phone||''):null;
       submitForm(form,'Lưu',async()=>{if(!title.value.trim())throw Error('Vui lòng nhập tên.');await request(endpoints[target]+(row.id?'/'+row.id:''),{method:row.id?'PUT':'POST',body:JSON.stringify({name:title.value.trim(),[property]:description.value,...(phone?{phone:phone.value}:{})})});await saved('Đã lưu.');});return;
     }
     const slug=field(form,'Mã đường dẫn (ví dụ: gioi-thieu)','text',row.slug||'');slug.required=true;
@@ -32,11 +32,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   function logout() { localStorage.removeItem('library_admin_token');localStorage.removeItem('library_admin_profile');location.href='/admin/login'; }
   $('adminLogout').addEventListener('click', logout);
   async function request(url, options = {}) {
-    const response = await fetch(url, {...options,headers:{Authorization:`Bearer ${localStorage.getItem('library_admin_token')}`, ...(options.body ? {'Content-Type':'application/json'} : {}), ...options.headers}});
+    const response = await fetch(url, {...options,headers:{Authorization:`Bearer ${localStorage.getItem('library_admin_token')}`, ...(options.body && !(options.body instanceof FormData) ? {'Content-Type':'application/json'} : {}), ...options.headers}});
     if(response.status===401){logout();throw new Error('Phiên đăng nhập đã hết hạn.');}
     const data=await response.json().catch(()=>null);
     if(!response.ok) throw new Error(typeof data?.message==='string'?data.message:`Không thể thực hiện (${response.status}).`);
     return data;
+  }
+  function coverImage(url,title,cls='admin-cover-thumb') {
+    const box=el('span',null,cls),image=el('img'),placeholder=el('span','Chưa có ảnh');image.alt=title||'Ảnh bìa';image.loading='eager';image.hidden=true;
+    image.addEventListener('load',()=>{image.hidden=false;placeholder.hidden=true;});image.addEventListener('error',()=>{image.hidden=true;placeholder.hidden=false;});
+    box.append(image,placeholder);setImage(url);function setImage(value){if(!value){image.removeAttribute('src');image.hidden=true;placeholder.hidden=false;return;}try{const parsed=new URL(value,location.origin);if(!['http:','https:','blob:'].includes(parsed.protocol))throw Error();image.src=value;}catch{image.hidden=true;placeholder.hidden=false;}}return {box,setImage};
+  }
+  function compactActions(controls){
+    controls.classList.add('admin-row-actions');if(section==='books')controls.classList.add('admin-book-actions');
+    const paths={inventory:['M21 8l-9 5-9-5 9-5 9 5Z','M3 8v10l9 5 9-5V8','M12 13v10','M7.5 5.5l9 5'],edit:['M16 3l5 5-12 12-6 1 1-6L16 3Z','M14 5l5 5'],trash:['M3 6h18','M9 6V3h6v3','M5 6l1 15h12l1-15','M10 10v7','M14 10v7'],back:['M9 10L4 5l5-4','M4 5h9a8 8 0 1 1-8 12'],check:['M9 12l2 2 4-4','M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9Z'],lock:['M5 10h14v11H5Z','M8 10V6a4 4 0 0 1 8 0v4'],unlock:['M5 10h14v11H5Z','M8 10V6a4 4 0 0 1 7-2'],eye:['M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z','M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z']};
+    controls.querySelectorAll('button,a').forEach(button=>{const label=button.textContent.trim();const kind=/^Xóa/.test(label)?'trash':/Từng quyển/.test(label)?'inventory':/Sửa|Chỉnh sửa/.test(label)?'edit':/^Nhận trả/.test(label)?'back':/^Mở khóa/.test(label)?'unlock':/^Khóa/.test(label)?'lock':/^Xem/.test(label)?'eye':'check';
+      button.setAttribute('aria-label',label);button.title=label;button.classList.add('admin-icon-button');if(kind==='trash')button.classList.add('admin-icon-danger');
+      const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');for(const [key,value] of Object.entries({viewBox:'0 0 24 24',width:'18',height:'18',fill:'none',stroke:'currentColor','stroke-width':'1.8','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false'}))svg.setAttribute(key,value);
+      paths[kind].forEach(d=>{const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',d);svg.append(path);});button.replaceChildren(svg);
+    });
   }
   function action(text, handler) { const button=el('button',text,'btn btn-secondary');button.type='button';button.addEventListener('click',async()=>{if(button.disabled)return;button.disabled=true;try{await handler();}catch(error){$('dialogMessage').textContent=error.message;$('adminMessage').textContent=error.message;}finally{button.disabled=false;}});return button; }
   function openDialog(title) { $('dialogTitle').textContent=title;$('dialogMessage').textContent='';$('dialogBody').replaceChildren();if(!$('adminDialog').open)$('adminDialog').showModal();return $('dialogBody'); }
@@ -45,6 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function selectField(form,title,options,value){const label=el('label',title),select=el('select');for(const [key,text] of options){const option=el('option',text);option.value=key;select.append(option);}select.value=value;label.append(select);form.append(label);return select;}
   function submitForm(form,text,handler){const button=el('button',text,'btn');button.type='submit';form.append(button);form.addEventListener('submit',async event=>{event.preventDefault();if(button.disabled)return;button.disabled=true;$('dialogMessage').textContent='Đang xử lý...';try{await handler();}catch(error){$('dialogMessage').textContent=error.message;}finally{button.disabled=false;if($('dialogMessage').textContent==='Đang xử lý...')$('dialogMessage').textContent='';}});}
   async function saved(message){$('adminDialog').close();await load();$('adminMessage').textContent=message;}
+  async function deleteEntry(row){if(!confirm(`Xóa ${row.title||row.name}? Chỉ xóa được dữ liệu chưa có liên kết nghiệp vụ.`))return;await request(endpoints[section]+'/'+row.id,{method:'DELETE'});await load();$('adminMessage').textContent='Đã xóa dữ liệu.';}
   async function inventory(book){
     const body=openDialog(`Từng quyển — ${book.title}`);body.textContent='Đang tải...';
     const copies=await request(`/api/v1/books/${book.id}/copies`);body.replaceChildren();
@@ -108,16 +123,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const body=openDialog(existing?'Sửa đầu sách':'Thêm đầu sách');body.textContent='Đang tải danh mục...';
     try{const [categories,authors,publishers]=await Promise.all(['/categories','/authors','/publishers'].map(path=>request('/api/v1'+path)));body.replaceChildren();
       const form=el('form',null,'admin-form');const title=field(form,'Tên sách');title.required=true;const isbn=field(form,'ISBN');
-      const cover=field(form,'Đường dẫn ảnh bìa (https://...)','url');const description=field(form,'Mô tả');
+      const cover=field(form,'Ảnh bìa (https://... hoặc /images/...)','text');cover.maxLength=1000;const description=field(form,'Mô tả');description.maxLength=4000;title.maxLength=255;isbn.maxLength=30;
+      const preview=coverImage(existing?.coverImageUrl,existing?.title,'admin-cover-preview');const imagePanel=el('div',null,'wide admin-cover-panel');const uploadLabel=el('label','Chọn ảnh bìa từ máy (JPG/PNG, tối đa 2 MB)'),upload=el('input');upload.type='file';upload.accept='image/jpeg,image/png';uploadLabel.append(upload);const uploadHint=el('small','Bạn có thể tải ảnh từ máy hoặc nhập đường dẫn ở trên. Ảnh mới được lưu khi nhấn Lưu.');const imageTools=el('div');imageTools.append(uploadLabel,uploadHint);imagePanel.append(preview.box,imageTools);form.append(imagePanel);let previewUrl=null;
+      $('adminDialog').addEventListener('close',()=>{if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}},{once:true});
+      upload.addEventListener('change',()=>{const file=upload.files[0];if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}if(!file){preview.setImage(cover.value);return;}if(!['image/jpeg','image/png'].includes(file.type)||file.size>2*1024*1024){upload.value='';preview.setImage(cover.value);$('dialogMessage').textContent='Chọn ảnh JPG/PNG không quá 2 MB.';return;}previewUrl=URL.createObjectURL(file);preview.setImage(previewUrl);$('dialogMessage').textContent='Ảnh đã chọn sẽ được tải lên khi lưu sách.';});
+      cover.addEventListener('input',()=>{upload.value='';if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}preview.setImage(cover.value);});
+      imageTools.append(action('Bỏ ảnh bìa',()=>{cover.value='';upload.value='';if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}preview.setImage('');$('dialogMessage').textContent='Nhấn Lưu để xác nhận bỏ ảnh bìa.';}));
       const category=selectField(form,'Thể loại',[['','Chưa phân loại'],...categories.map(x=>[String(x.id),x.name])],'');
       const author=selectField(form,'Tác giả',[['','Chưa chọn'],...authors.map(x=>[String(x.id),x.name])],'');
       const publisher=selectField(form,'Nhà xuất bản',[['','Chưa chọn'],...publishers.map(x=>[String(x.id),x.name])],'');
-      const quantity=field(form,'Số lượng','number',1);quantity.min=1;quantity.required=true;
-      const rental=field(form,'Phí mượn / quyển / 14 ngày','number',0),price=field(form,'Giá bán','number',0);for(const input of [rental,price]){input.min=0;input.required=true;}
+      const quantity=field(form,'Số lượng','number',1);quantity.min=1;quantity.max=1000;quantity.required=true;
+      const rental=field(form,'Phí mượn / quyển / 14 ngày','number',0),price=field(form,'Giá bán','number',0);for(const input of [rental,price]){input.min=0;input.step='0.01';input.required=true;}
       if(existing){title.value=existing.title||'';isbn.value=existing.isbn||'';cover.value=existing.coverImageUrl||'';description.value=existing.description||'';
         category.value=String(existing.category?.id||'');author.value=String(existing.author?.id||'');publisher.value=String(existing.publisher?.id||'');
         quantity.value=existing.totalQuantity;quantity.disabled=true;rental.value=existing.rentalPrice;price.value=existing.salePrice;}
-      submitForm(form,existing?'Lưu thay đổi':'Tạo đầu sách',async()=>{await request(existing?`/api/v1/books/${existing.id}`:'/api/v1/books',{method:existing?'PUT':'POST',body:JSON.stringify({title:title.value,isbn:isbn.value,coverImageUrl:cover.value,description:description.value,categoryId:category.value?Number(category.value):null,authorId:author.value?Number(author.value):null,publisherId:publisher.value?Number(publisher.value):null,totalQuantity:Number(quantity.value),rentalPrice:Number(rental.value),salePrice:Number(price.value)})});await saved(existing?'Đã cập nhật thông tin đầu sách.':'Đã tạo đầu sách và mã từng quyển.');});body.append(form);
+      submitForm(form,existing?'Lưu thay đổi':'Tạo đầu sách',async()=>{if(upload.files[0]){const data=new FormData();data.append('file',upload.files[0]);const result=await request('/api/v1/books/cover-upload',{method:'POST',body:data});cover.value=result.url;upload.value='';preview.setImage(result.url);}if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}await request(existing?`/api/v1/books/${existing.id}`:'/api/v1/books',{method:existing?'PUT':'POST',body:JSON.stringify({title:title.value,isbn:isbn.value,coverImageUrl:cover.value,description:description.value,categoryId:category.value?Number(category.value):null,authorId:author.value?Number(author.value):null,publisherId:publisher.value?Number(publisher.value):null,totalQuantity:Number(quantity.value),rentalPrice:Number(rental.value),salePrice:Number(price.value)})});await saved(existing?'Đã cập nhật thông tin đầu sách.':'Đã tạo đầu sách và mã từng quyển.');});body.append(form);
     }catch(error){$('dialogMessage').textContent=error.message;body.replaceChildren();}
   }
   $('newBook').addEventListener('click',()=>managed(section)?editEntry():bookForm());
@@ -129,9 +149,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const head=el('tr');columns[section].forEach(text=>head.append(el('th',text)));$('adminHead').replaceChildren(head);$('adminRows').replaceChildren();
     for(const row of filtered.slice(page*pageSize,(page+1)*pageSize)){
       const tr=el('tr');const cells=[];let controls=el('div');
-      if(taxonomy[section]){cells.push(row.name,row[taxonomy[section][0]]||'—');controls.append(action('Chỉnh sửa',()=>editEntry(row)));}
+      if(taxonomy[section]){cells.push(row.name,row[taxonomy[section][0]]||'—');controls.append(action('Chỉnh sửa',()=>editEntry(row)),action('Xóa',()=>deleteEntry(row)));}
       if(contentKinds[section]){cells.push(row.title,row.slug,row.published?'Đang hiển thị':'Bản nháp / ẩn');controls.append(action('Chỉnh sửa',()=>editEntry(row)));if(row.published&&['ebooks','posts','pages'].includes(section)){const link=el('a','Xem');link.href='/user/read/'+row.slug;controls.append(link);}}
-      if(section==='books'){cells.push(row.title,row.author?.name||'Chưa có tác giả',row.category?.name||'—',row.availableQuantity,row.totalQuantity,money(row.rentalPrice),money(row.salePrice));controls.append(action('Từng quyển / nhập sách',()=>inventory(row)),action('Sửa đầu sách',()=>bookForm(row)));}
+      if(section==='books'){cells.push(coverImage(row.coverImageUrl,row.title).box,row.title,row.author?.name||'Chưa có tác giả',row.category?.name||'—',row.availableQuantity,row.totalQuantity,money(row.rentalPrice),money(row.salePrice));controls.append(action('Từng quyển / nhập sách',()=>inventory(row)),action('Sửa đầu sách',()=>bookForm(row)),action('Xóa đầu sách',()=>deleteEntry(row)));}
       if(section==='loans'){
         const groups=new Map();
         for(const item of row.items||[]){
@@ -145,7 +165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         cells.push(`#${row.id}`, row.user?.fullName||'—', row.user?.email||'—', titles, grouped.map(g=>String(g.quantity)), codes, row.borrowDate||'—',row.dueDate||'—',labels[loanStatus(row)]||row.status);if(row.status!=='RETURNED')controls.append(action('Nhận trả',()=>returnLoan(row)));else controls.append(el('span',`Đã trả ${row.returnDate||''}`));}
       if(section==='fines'){cells.push(`#${row.id}`,row.loan?.user?.email||'—',`#${row.loan?.id||'—'}`,row.reason||'—',money(row.amount),labels[status(row)]);if(!row.paid)controls.append(action('Xác nhận đã thu',async()=>{if(!confirm(`Đã nhận ${money(row.amount)} cho khoản phạt #${row.id}?`))return;await request(`/api/v1/fines/${row.id}/mark-paid`,{method:'POST'});await load();$('adminMessage').textContent='Đã xác nhận thanh toán khoản phạt.';}));}
       if(section==='sales'){cells.push(`#${row.id}`,row.user?.email||'—',row.createdAt?.replace('T',' ').slice(0,19)||'—',(row.items||[]).map(i=>`${i.book?.title||''} × ${i.quantity}`).join('; '),money(row.totalAmount));controls=null;}
-      if(section==='payments'){cells.push(row.id,row.payerEmail,row.transactionNo||'—',money(row.amount),row.method==='CASH'?'Trực tiếp':'Chuyển khoản VNPay',({UNPAID:'Chờ thu tiền',PAID:'Đã thanh toán',PENDING:'Chờ VNPay',FAILED:'Thất bại',REVIEW_REQUIRED:'Cần xử lý'})[row.status]||row.status,row.loanId||'—',row.message||'—');
+      if(section==='payments'){cells.push(row.id,row.payerEmail,row.transactionNo||'—',money(row.amount),row.method==='CASH'?'Trực tiếp':'Chuyển khoản ngân hàng',({UNPAID:'Chờ thu tiền',PAID:'Đã thanh toán',PENDING:'Chờ chuyển khoản',FAILED:'Thất bại',REVIEW_REQUIRED:'Cần xử lý'})[row.status]||row.status,row.loanId||'—',row.message||'—');
        if(row.method==='CASH'&&row.status==='UNPAID'){const confirmButton=el('button','Xác nhận đã thu tiền');confirmButton.className='btn btn-secondary';confirmButton.addEventListener('click',async()=>{if(!confirm(`Đã nhận đủ ${money(row.amount)} cho phiếu #${row.loanId}?`))return;confirmButton.disabled=true;try{await request(`/api/v1/payments/${row.id}/confirm-cash`,{method:'POST'});await load();}catch(error){$('adminMessage').textContent=error.message;confirmButton.disabled=false;}});controls.append(confirmButton);}else controls.append(el('span',row.confirmedBy||'—'));}
       if(section==='users'){cells.push(row.fullName,row.email,row.phone||'—',row.address||'—',row.roles.map(r=>r.replace('ROLE_','')).join(', '),labels[status(row)]);controls.append(action('Chỉnh sửa',()=>editUser(row)));
         if(row.roles.includes('ROLE_ADMIN'))controls.append(el('span','Admin được bảo vệ','admin-badge'));
@@ -154,7 +174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           await request(`/api/v1/admin/users/${row.id}/status`,{method:'PATCH',body:JSON.stringify({enabled:!row.enabled})});
           await load();$('adminMessage').textContent=row.enabled?'Đã khóa tài khoản.':'Đã mở khóa tài khoản.';
         }));}
-      cells.forEach((value,index)=>{const td=el('td');if(Array.isArray(value)){value.forEach(text=>td.append(el('div',text,'admin-cell-line')));}else td.textContent=value;if(section==='loans')td.className=`loan-column-${index}`;tr.append(td);});if(controls){const td=el('td');td.append(controls);tr.append(td);}$('adminRows').append(tr);
+      cells.forEach((value,index)=>{const td=el('td');if(value instanceof Node){td.append(value);}else if(Array.isArray(value)){value.forEach(text=>td.append(el('div',text,'admin-cell-line')));}else td.textContent=value;if(section==='loans')td.className=`loan-column-${index}`;tr.append(td);});if(controls){compactActions(controls);const td=el('td');td.className='admin-actions-cell';td.append(controls);tr.append(td);}$('adminRows').append(tr);
     }
     if(!filtered.length){const tr=el('tr'),td=el('td','Không có dữ liệu phù hợp.');td.colSpan=columns[section].length;tr.append(td);$('adminRows').append(tr);}
     $('adminPage').textContent=`Trang ${page+1}/${pages} · ${filtered.length} kết quả`;$('adminPrevious').disabled=page===0;$('adminNext').disabled=page>=pages-1;

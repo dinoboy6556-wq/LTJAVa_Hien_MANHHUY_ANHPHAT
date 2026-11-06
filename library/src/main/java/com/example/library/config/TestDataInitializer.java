@@ -23,6 +23,7 @@ import java.util.UUID;
 @Order(300)
 @ConditionalOnProperty(name = "app.seed.test-data", havingValue = "true")
 public class TestDataInitializer implements CommandLineRunner {
+    @org.springframework.beans.factory.annotation.Value("${app.seed.test-book-count:40}") private int extraBookCount;
     private final UserRepository users;
     private final RoleRepository roles;
     private final CategoryRepository categories;
@@ -62,6 +63,7 @@ public class TestDataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
+        if(extraBookCount<20||extraBookCount>200)throw new IllegalArgumentException("Số sách kiểm thử phải từ 20 đến 200");
         ensureReferenceData();
         Role userRole = roles.findByName(RoleName.ROLE_USER)
                 .orElseThrow(() -> new IllegalStateException("Thiếu ROLE_USER"));
@@ -71,7 +73,7 @@ public class TestDataInitializer implements CommandLineRunner {
         List<Book> addedBooks = ensureExtraCatalog();
 
         List<Book> catalog = books.findAll().stream().sorted(java.util.Comparator.comparing(Book::getId)).toList();
-        if (catalog.size() < 20 || addedBooks.size() != 10) throw new IllegalStateException("Không tạo đủ danh mục sách mẫu");
+        if (catalog.size() < 20 || addedBooks.size() != extraBookCount) throw new IllegalStateException("Không tạo đủ danh mục sách mẫu");
 
         for (int index = 0; index < 10; index++) {
             User user = testUsers.get(index);
@@ -101,7 +103,7 @@ public class TestDataInitializer implements CommandLineRunner {
         if (publisherList.isEmpty()) throw new IllegalStateException("Cần ít nhất một nhà xuất bản để tạo sách mẫu");
         List<Book> existingBooks = books.findAll();
         List<Book> result = new ArrayList<>();
-        for (int index = 1; index <= 10; index++) {
+        for (int index = 1; index <= extraBookCount; index++) {
             String suffix = String.format("%02d", index);
             int itemNumber = index;
             String categoryName = "Danh mục kiểm thử " + suffix;

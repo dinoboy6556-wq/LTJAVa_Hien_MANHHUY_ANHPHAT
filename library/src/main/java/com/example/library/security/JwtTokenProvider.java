@@ -12,14 +12,17 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-    @Value("${app.jwt.secret:9a6e234578123456789012345678901234567890123456789012345678901234}")
+    @Value("${app.jwt.secret:}")
     private String jwtSecret;
 
     @Value("${app.jwt.expiration-ms:86400000}")
     private int jwtExpirationMs;
 
+    @jakarta.annotation.PostConstruct
+    void initializeSecret(){if(jwtSecret==null||jwtSecret.isBlank()){byte[] key=new byte[48];new java.security.SecureRandom().nextBytes(key);jwtSecret=java.util.Base64.getEncoder().encodeToString(key);}if(jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length<32)throw new IllegalStateException("JWT_SECRET cần ít nhất 32 byte");}
+
     private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     public String generateToken(Authentication authentication) {

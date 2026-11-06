@@ -67,4 +67,7 @@ public class BookController {
     public ResponseEntity<Book> createBook(@Valid @RequestBody BookCreateRequest req) {
         return ResponseEntity.ok(bookService.createBook(req));
     }
+    @Autowired private com.example.library.service.DeletionService deletion;
+    @DeleteMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','LIBRARIAN')")
+    public ResponseEntity<Void> delete(@PathVariable Long id){deletion.deleteBook(id);return ResponseEntity.noContent().build();}
 }
