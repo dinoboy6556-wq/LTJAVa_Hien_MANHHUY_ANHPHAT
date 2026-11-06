@@ -399,17 +399,35 @@ class BookCopyIntegrationTest {
     }
 
     @Test @WithMockUser(username="copies@example.com")
-    void readerReturnsOwnCopiesPartiallyThenAll() throws Exception {
+    void readerRequestsReturnAndStaffApprovesCopiesPartiallyThenAll() throws Exception {
         user();Book book=book(2,2);inventory.initialize(book.getId());
         Loan loan=loanService.createLoan(request(book.getId(),2));
         Long first=loan.getItems().get(0).getId();
         mvc.perform(post("/api/v1/loans/"+loan.getId()+"/my-return").contentType("application/json")
+          .content("{\"itemIds\":["+first+"],\"condition\":\"LOST\"}"))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("BORROWED"));
+        assertEquals(0,book.getAvailableQuantity());
+        assertNull(loan.getItems().get(0).getReturnedAt());
+        assertNotNull(loan.getItems().get(0).getReturnRequestedAt());
+        mvc.perform(post("/api/v1/loans/"+loan.getId()+"/renew").contentType("application/json")
+          .content("{\"days\":1}")).andExpect(status().isConflict());
+        mvc.perform(post("/api/v1/loans/"+loan.getId()+"/return")).andExpect(status().isForbidden());
+
+        var staff=org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("staff@test").roles("LIBRARIAN");
+        mvc.perform(post("/api/v1/loans/"+loan.getId()+"/return").with(staff).contentType("application/json")
           .content("{\"itemIds\":["+first+"],\"condition\":\"NORMAL\"}"))
           .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("BORROWED"));
         assertEquals(1,book.getAvailableQuantity());
+        mvc.perform(get("/api/v1/notifications")).andExpect(jsonPath("$[?(@.type == 'RETURN_APPROVED')]").isNotEmpty());
+
         mvc.perform(post("/api/v1/loans/"+loan.getId()+"/my-return"))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("BORROWED"));
+        assertEquals(1,book.getAvailableQuantity());
+        mvc.perform(post("/api/v1/loans/"+loan.getId()+"/return").with(staff).contentType("application/json")
+          .content("{\"condition\":\"NORMAL\"}"))
           .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("RETURNED"));
         assertEquals(2,book.getAvailableQuantity());
+        mvc.perform(get("/api/v1/notifications")).andExpect(jsonPath("$[?(@.type == 'RETURN_APPROVED')].href").value(org.hamcrest.Matchers.hasItem("/account/history")));
     }
     @Test @WithMockUser(username="copies@example.com")
     void readerCannotReturnSomeoneElsesLoanThroughSelfService() throws Exception {

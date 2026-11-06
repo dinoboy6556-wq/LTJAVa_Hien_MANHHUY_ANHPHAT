@@ -16,6 +16,11 @@ public class NotificationController {
  public List<Notice> list(Authentication auth){
   var user=users.findByEmail(auth.getName()).orElseThrow();List<Notice> result=new ArrayList<>();
   for(Loan loan:loans.findByUser(user)){
+   var requested=loan.getItems().stream().filter(item->item.getReturnRequestedAt()!=null).toList();
+   long waiting=requested.stream().filter(item->item.getReturnedAt()==null).count();
+   long approved=requested.stream().filter(item->item.getReturnedAt()!=null).count();
+   if(waiting>0)result.add(new Notice("RETURN_PENDING","Phiếu #"+loan.getId()+": "+waiting+" quyển đang chờ kiểm tra và duyệt trả.","/account/loans"));
+   if(approved>0)result.add(new Notice("RETURN_APPROVED","Trả sách thành công: "+approved+" quyển của phiếu #"+loan.getId()+" đã được thư viện kiểm tra và duyệt.",loan.getStatus()==LoanStatus.RETURNED?"/account/history":"/account/loans"));
    if(loan.getStatus()==LoanStatus.RETURNED)continue;
    long days=ChronoUnit.DAYS.between(LocalDate.now(),loan.getDueDate());
    if(days<=3)result.add(new Notice(days<0?"OVERDUE":"DUE_SOON","Phiếu #"+loan.getId()+(days<0?" quá hạn "+(-days)+" ngày":days==0?" đến hạn trả hôm nay":" còn "+days+" ngày đến hạn trả"),"/user/borrowed"));

@@ -38,8 +38,9 @@ function CartBody({ initial }) {
   const update = next => { saveCart(email, next); setItems(next); };
   const valid = items.length > 0 && items.every(item => books.has(item.bookId) && books.get(item.bookId).availableQuantity >= item.quantity);
   const validDays = Number.isInteger(days) && days >= 1 && days <= 365;
-  const billingPeriods = validDays ? Math.ceil(days / 14) : 0;
-  const pricePerCopy = book => Number(book?.rentalPrice || 0) * billingPeriods;
+  const pricePerCopy = book => validDays ? Math.ceil(Math.round(Number(book?.rentalPrice || 0) * 100) * days / 1400) : 0;
+  const dailyRate = book => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 })
+    .format(Number(book?.rentalPrice || 0) / 14);
   const total = items.reduce((sum, item) => sum + pricePerCopy(books.get(item.bookId)) * item.quantity, 0);
   const copies = items.reduce((sum, item) => sum + item.quantity, 0);
   const canContinue = p => p.method === 'PAYOS' && ['PENDING','FAILED'].includes(p.status) && !payments.some(next=>next.requestKey==='retry-'+p.id);
@@ -112,7 +113,7 @@ function CartBody({ initial }) {
   }
 
   return <>
-    <div className="cart-policy-note"><ShieldCheck size={17}/><span>Phí cơ bản áp dụng cho mỗi quyển trong 14 ngày. Mượn thêm ngày sẽ tính thêm theo từng chu kỳ 14 ngày; sách chưa được giữ cho đến khi yêu cầu được xác nhận.</span></div>
+    <div className="cart-policy-note"><ShieldCheck size={17}/><span>Phí mượn tính theo số ngày bạn chọn và làm tròn lên đến đồng cho mỗi quyển. Sách được giữ khi yêu cầu được xác nhận.</span></div>
     {message && <div className={message.startsWith('Đã tạo') ? 'cart-feedback cart-feedback-success' : 'cart-feedback'} role="status">{message}{message.startsWith('Đã tạo') && <Link href="/account/loans">Theo dõi phiếu mượn <ArrowRight size={15}/></Link>}</div>}
     {payments.some(canContinue)&&<section className="unpaid-orders" aria-label="Yêu cầu mượn chưa thanh toán"><header><h2>Yêu cầu mượn chưa thanh toán</h2><p>Đơn vẫn được lưu khi bạn đóng hoặc hủy trang QR. Tiếp tục sẽ mở link còn hiệu lực hoặc tạo link mới cho đúng sách đã chọn. Hủy yêu cầu để đặt mới hoặc đổi phương thức.</p></header>{payments.filter(canContinue).slice(0,5).map(p=><article key={p.id}><div><b>{money(p.amount)}</b><small>Mã {p.id} · {p.status==='PENDING'?'Đang tự kiểm tra chuyển khoản…':'Link đã hủy hoặc hết hạn'}</small></div><div><button className="secondary-button" disabled={busy} onClick={()=>restoreOrder(p)}>Xem lại sách</button><button className="primary-button" disabled={busy} onClick={()=>resumePayment(p.id)}>Tiếp tục thanh toán</button><button className="cancel-payment-button" disabled={busy} onClick={()=>cancelPayment(p.id)}><Trash2 size={14}/> Hủy yêu cầu</button></div></article>)}</section>}
     <div className="cart-layout">
@@ -126,7 +127,7 @@ function CartBody({ initial }) {
             return <article className="cart-item" key={item.bookId}>
               <div className={'cart-book-art ' + (item.bookId % 2 ? 'cover-moss' : 'cover-ochre')}><BookOpen size={25}/><span>MỘC</span></div>
               <div className="cart-book-info"><Link href={'/books/' + item.bookId} className="cart-book-title">{book?.title || 'Sách không còn trong thư viện'}</Link><span>{book?.author?.name || 'Tác giả đang cập nhật'}</span><small className={insufficient ? 'cart-stock-low' : 'cart-stock-ok'}>{book ? insufficient ? `Chỉ còn ${maxQuantity} cuốn — vui lòng điều chỉnh` : `Còn ${maxQuantity} cuốn` : 'Sách không khả dụng'}</small><span className="cart-mobile-price">Phí cho {days} ngày: {money(pricePerCopy(book))}/quyển</span></div>
-              <div className="cart-item-price"><small>PHÍ / QUYỂN / 14 NGÀY</small><strong>{money(book?.rentalPrice)}</strong></div>
+              <div className="cart-item-price"><small>PHÍ / QUYỂN / NGÀY</small><strong>≈ {dailyRate(book)} đ</strong></div>
               <div className="cart-item-quantity"><small>SỐ LƯỢNG</small><div className="cart-quantity-stepper"><button type="button" aria-label={'Giảm số lượng ' + (book?.title || '')} disabled={busy || item.quantity <= 1} onClick={() => update(items.map(current => current.bookId === item.bookId ? { ...current, quantity: Math.max(1, current.quantity - 1) } : current))}><Minus size={14}/></button><span>{item.quantity}</span><button type="button" aria-label={'Tăng số lượng ' + (book?.title || '')} disabled={busy || item.quantity >= (maxQuantity || 1)} onClick={() => update(items.map(current => current.bookId === item.bookId ? { ...current, quantity: current.quantity + 1 } : current))}><Plus size={14}/></button></div></div>
               <div className="cart-item-total"><small>THÀNH TIỀN</small><strong>{money(pricePerCopy(book) * item.quantity)}</strong></div>
               <button className="cart-remove" type="button" aria-label={'Xóa ' + (book?.title || 'sách')} disabled={busy} onClick={() => update(items.filter(current => current.bookId !== item.bookId))}><Trash2 size={15}/><span>Xóa sách</span></button>
@@ -138,9 +139,18 @@ function CartBody({ initial }) {
 
       <aside className="cart-checkout-panel">{pendingPayment&&<p className="cart-pending-hint">Có yêu cầu chuyển khoản đang chờ. Hãy tiếp tục hoặc hủy yêu cầu phía trên trước khi đặt đơn khác.</p>}
         <div className="cart-panel-heading"><div><span className="eyebrow">TÓM TẮT</span><h2>Thông tin mượn</h2></div></div>
-        <label className="cart-form-field"><span><Clock3 size={15}/> Thời hạn mượn</span><div className="cart-duration-input"><input aria-label="Số ngày mượn" aria-describedby="rental-days-help" type="number" min="1" max="365" step="1" inputMode="numeric" value={days} disabled={busy} onChange={event => setDays(event.target.value === '' ? '' : Number(event.target.value))}/><span>ngày</span></div><small id="rental-days-help">Nhập từ 1 đến 365 ngày. Phí tính theo chu kỳ 14 ngày, làm tròn lên.</small>{!validDays&&<small className="cart-days-error" role="alert">Vui lòng nhập số nguyên từ 1 đến 365.</small>}</label>
+        <div className="cart-form-field">
+          <label htmlFor="cart-duration"><Clock3 size={15}/> Thời hạn mượn</label>
+          <div className="cart-duration-input">
+            <button type="button" aria-label="Giảm số ngày mượn" disabled={busy || !validDays || days <= 1} onClick={() => setDays(days - 1)}><Minus size={16}/></button>
+            <input id="cart-duration" aria-label="Số ngày mượn" type="number" min="1" max="365" step="1" inputMode="numeric" value={days} disabled={busy} onChange={event => setDays(event.target.value === '' ? '' : Number(event.target.value))}/>
+            <span>ngày</span>
+            <button type="button" aria-label="Tăng số ngày mượn" disabled={busy || !validDays || days >= 365} onClick={() => setDays(days + 1)}><Plus size={16}/></button>
+          </div>
+          {!validDays && <small className="cart-days-error" role="alert">Vui lòng nhập số nguyên từ 1 đến 365.</small>}
+        </div>
         <fieldset className="cart-payment-options"><legend>Phương thức thanh toán</legend><label className={method === 'CASH' ? 'payment-option selected' : 'payment-option'}><input type="radio" name="payment" value="CASH" checked={method === 'CASH'} disabled={busy} onChange={() => setMethod('CASH')}/><span className="payment-method-icon"><Banknote size={18}/></span><span><b>Thanh toán tại thư viện</b><small>Thanh toán trực tiếp tại quầy</small></span><i/></label><label className={method === 'PAYOS' ? 'payment-option selected' : 'payment-option'}><input type="radio" name="payment" value="PAYOS" checked={method === 'PAYOS'} disabled={busy} onChange={() => setMethod('PAYOS')}/><span className="payment-method-icon"><CreditCard size={18}/></span><span><b>Chuyển khoản ngân hàng</b><small>Chuyển đến cổng thanh toán an toàn</small></span><i/></label></fieldset>
-        <div className="cart-total-lines"><div><span>{copies} quyển sách</span><strong>{money(total)}</strong></div><div><span>Thời hạn</span><strong>{validDays ? days+' ngày' : 'Chưa chọn'}</strong></div><div><span>Chu kỳ tính phí</span><strong>{billingPeriods} × 14 ngày</strong></div></div>
+        <div className="cart-total-lines"><div><span>{copies} quyển sách</span><strong>{money(total)}</strong></div><div><span>Thời hạn</span><strong>{validDays ? days+' ngày' : 'Chưa chọn'}</strong></div></div>
         <div className="cart-total"><span>Tổng phí mượn</span><strong>{money(total)}</strong></div>
         {!valid && items.length > 0 && <p className="cart-validation" role="alert">Có sách không đủ số lượng hoặc không còn khả dụng. Vui lòng chỉnh lại giỏ.</p>}
         {pendingPayment && <p className="cart-pending-note"><Clock3 size={15}/> Bạn có giao dịch đang chờ. Hãy kiểm tra trạng thái trước khi tạo giao dịch mới.</p>}

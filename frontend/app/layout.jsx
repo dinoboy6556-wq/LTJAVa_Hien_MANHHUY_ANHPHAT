@@ -1,6 +1,8 @@
 import './globals.css';
 import './customer.css';
 import './footer.css';
+import Link from 'next/link';
+import { MessageCircle } from 'lucide-react';
 import SiteHeader from '../components/site-header';
 import SiteFooter from '../components/site-footer';
 
@@ -10,5 +12,5 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
-  return <html lang="vi" data-scroll-behavior="smooth"><body id="top"><SiteHeader />{children}<SiteFooter /></body></html>;
+  return <html lang="vi" data-scroll-behavior="smooth"><body id="top"><SiteHeader />{children}<SiteFooter /><Link href="/assistant" className="library-chat-launcher"><MessageCircle size={21} aria-hidden="true" />Hỏi AI</Link></body></html>;
 }

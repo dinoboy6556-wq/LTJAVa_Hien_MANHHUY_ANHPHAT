@@ -23,6 +23,10 @@ public class ReaderEmailListener {
 
     @TransactionalEventListener
     public void sendAfterCommit(ReaderEmail email) {
+        send(email);
+    }
+
+    void send(ReaderEmail email) {
         try {
             var message = new SimpleMailMessage();
             message.setFrom(from);
@@ -31,7 +35,7 @@ public class ReaderEmailListener {
             message.setText(email.body());
             sender.send(message);
         } catch (RuntimeException exception) {
-            // The business transaction has already committed. Keep addresses and SMTP details out of logs.
+            // Keep addresses and SMTP details out of logs.
             log.warn("Reader email delivery failed: {}", exception.getClass().getSimpleName());
         }
     }

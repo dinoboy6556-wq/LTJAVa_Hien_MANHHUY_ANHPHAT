@@ -74,7 +74,7 @@ public class LoanService {
             Book book = copyService.lockBook(itemReq.getBookId());
             List<BookCopy> selected = copyService.take(book.getId(), itemReq.getQuantity(), BookCopyStatus.BORROWED);
 
-            BigDecimal pricePerCopy = RentalPricing.pricePerCopy(book.getRentalPrice(), days);
+            BigDecimal pricePerCopy = RentalPricing.pricePerCopy(book.getRentalPrice(), days, request.isDailyPricing());
             BigDecimal rentalFee = pricePerCopy.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalRentalFee = totalRentalFee.add(rentalFee);
 
@@ -169,7 +169,18 @@ public class LoanService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mượn"));
         if (loan.getUser() == null || !email.equals(loan.getUser().getEmail()))
             throw new org.springframework.security.access.AccessDeniedException("Bạn chỉ có thể trả sách của chính mình");
-        return returnLoan(loanId, request);
+        if (loan.getStatus() == LoanStatus.RETURNED) throw new IllegalStateException("Phiếu đã hoàn tất trả sách.");
+        List<LoanItem> remaining = loan.getItems().stream().filter(item -> item.getReturnedAt() == null).toList();
+        List<Long> ids = request == null ? null : request.getItemIds();
+        if (ids != null && (ids.isEmpty() || ids.stream().anyMatch(java.util.Objects::isNull)
+                || new java.util.HashSet<>(ids).size() != ids.size()
+                || ids.stream().anyMatch(id -> remaining.stream().noneMatch(item -> id.equals(item.getId())))))
+            throw new IllegalArgumentException("Danh sách quyển yêu cầu trả không hợp lệ.");
+        for (LoanItem item : remaining) {
+            if ((ids == null || ids.contains(item.getId())) && item.getReturnRequestedAt() == null)
+                item.setReturnRequestedAt(java.time.LocalDateTime.now());
+        }
+        return loanRepository.save(loan);
     }
 
     @Transactional
@@ -187,6 +198,8 @@ public class LoanService {
             throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền gia hạn phiếu mượn này");
         if (loan.getStatus() != LoanStatus.BORROWED || loan.getDueDate().isBefore(LocalDate.now()))
             throw new IllegalStateException("Chỉ có thể gia hạn phiếu đang mượn và chưa quá hạn");
+        if (loan.getItems().stream().anyMatch(item -> item.getReturnedAt() == null && item.getReturnRequestedAt() != null))
+            throw new IllegalStateException("Phiếu đang chờ kiểm tra trả sách, không thể gia hạn.");
         if (loan.getRenewalCount() != null && loan.getRenewalCount() >= 1)
             throw new IllegalStateException("Mỗi phiếu chỉ được gia hạn một lần");
         if (fineRepository.findByLoan(loan).stream().anyMatch(fine -> !Boolean.TRUE.equals(fine.getPaid())))

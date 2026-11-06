@@ -31,6 +31,10 @@ export const money = value => Number(value || 0).toLocaleString('vi-VN') + ' đ'
 export default function AccountData() {
   const { data, error, reload, busy } = useAccount(loadExtras);
   const [message, setMessage] = useState('');
+  useEffect(() => {
+    const timer = setInterval(() => { if (!document.hidden) reload(); }, 10000);
+    return () => clearInterval(timer);
+  }, [reload]);
   return <section className="account-extra account-updates">
     <header className="account-updates-heading"><div><span className="eyebrow">CẬP NHẬT CỦA BẠN</span><h2>Thông tin thư viện</h2><p>Thông báo, sách chờ và các khoản cần theo dõi được tổng hợp tại đây.</p></div><button className="account-refresh account-refresh-small" onClick={reload} disabled={busy}><RefreshCw size={15} className={busy ? 'refresh-spinning' : ''}/>{busy ? 'Đang tải' : 'Cập nhật'}</button></header>
     <AccountState data={data} error={error}/>

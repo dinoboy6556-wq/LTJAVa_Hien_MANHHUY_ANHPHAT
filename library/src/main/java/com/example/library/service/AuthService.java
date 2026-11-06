@@ -5,6 +5,7 @@ import com.example.library.entity.*;
 import com.example.library.repository.*;
 import com.example.library.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.Authentication;
@@ -12,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,6 +44,9 @@ public class AuthService {
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private ApplicationEventPublisher events;
 
     public JwtResponse login(LoginRequest loginRequest) {
         String attemptKey = loginRequest.getEmail();
@@ -74,14 +79,20 @@ public class AuthService {
                 .build();
     }
 
+    private static final SecureRandom OTP_RANDOM = new SecureRandom();
+
     @Transactional
     public void sendPasswordChangeOtp(String email) {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findForUpdateByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản"));
 
-        String otpCode = String.format("%06d", new Random().nextInt(1000000));
+        String otpCode = String.format("%06d", OTP_RANDOM.nextInt(1000000));
         LocalDateTime now = LocalDateTime.now();
 
+        if (passwordChangeOtpRepository.findTopByEmailOrderByCreatedAtDesc(email)
+                .filter(otp -> otp.getCreatedAt().plusMinutes(1).isAfter(now)).isPresent()) {
+            throw new IllegalStateException("Vui lòng chờ một phút trước khi yêu cầu mã mới.");
+        }
         passwordChangeOtpRepository.deleteAllByEmail(email);
         passwordChangeOtpRepository.save(PasswordChangeOtp.builder()
                 .email(email)
@@ -101,7 +112,7 @@ public class AuthService {
 
     @Transactional
     public void changePassword(String email, String currentPassword, String newPassword, String otpCode) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản"));
+        User user = userRepository.findForUpdateByEmail(email).orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản"));
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
             throw new org.springframework.security.authentication.BadCredentialsException("Mật khẩu hiện tại không đúng");
         }

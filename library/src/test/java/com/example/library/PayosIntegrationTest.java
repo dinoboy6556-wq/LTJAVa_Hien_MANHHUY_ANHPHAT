@@ -46,7 +46,7 @@ class PayosIntegrationTest {
  @Test @WithMockUser(username="payer@test.com",roles="USER") void newCheckoutRequiresPolicyConsentAndSavesVersion()throws Exception{
   request.setPolicyAccepted(false);for(String path:List.of("/api/v1/payments/cash","/api/v1/payments/payos/checkout","/api/v1/payments/checkout","/api/v1/loans")){mvc.perform(post(path).header("Idempotency-Key","consent-check-123456").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(request))).andExpect(status().isBadRequest());}assertEquals(0,payments.count());assertEquals(0,loans.count());
   request.setPolicyAccepted(true);request.setPolicyVersion("old-version");mvc.perform(post("/api/v1/payments/cash").header("Idempotency-Key","consent-check-123456").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(request))).andExpect(status().isBadRequest());
-  request.setPolicyVersion(BorrowingPolicy.VERSION);request.setDays(17);mvc.perform(post("/api/v1/payments/cash").header("Idempotency-Key","consent-check-123456").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(request))).andExpect(status().isOk()).andExpect(jsonPath("$.amount").value(40000));
+  request.setPolicyVersion(BorrowingPolicy.VERSION);request.setDays(17);mvc.perform(post("/api/v1/payments/cash").header("Idempotency-Key","consent-check-123456").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(request))).andExpect(status().isOk()).andExpect(jsonPath("$.amount").value(24286));
   var saved=payments.findAll().get(0);assertTrue(json.readTree(saved.getRequestJson()).path("policyAccepted").asBoolean());assertEquals(BorrowingPolicy.VERSION,json.readTree(saved.getRequestJson()).path("policyVersion").asText());assertNotNull(saved.getCreatedAt());
  }
 

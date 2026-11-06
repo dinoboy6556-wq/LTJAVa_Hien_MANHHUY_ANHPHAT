@@ -2,6 +2,7 @@
 node_modules/
 /frontend/.next/
 /frontend/out/
+/frontend/.vite/
 /frontend/.turbo/
 /frontend/.vercel/
 dist/
@@ -34,6 +35,7 @@ replay_pid*.log
 
 # Local database backups; keep schema/data/migration scripts tracked
 /database/backups/
+/library_db_backup.sql
 /database/*.bak
 
 # Next.js-generated agent guide; local tool metadata

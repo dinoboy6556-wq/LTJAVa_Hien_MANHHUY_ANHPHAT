@@ -33,6 +33,7 @@ public class LoanItem {
     private BigDecimal rentalPrice;
 
     private java.time.LocalDate returnedAt;
+    private java.time.LocalDateTime returnRequestedAt;
     @Enumerated(EnumType.STRING)
     private BookReturnCondition returnCondition;
 }

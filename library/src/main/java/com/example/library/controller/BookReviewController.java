@@ -22,8 +22,10 @@ public class BookReviewController {
     private final BookReviewRepository reviews;
     private final BookRepository books;
     private final UserRepository users;
-    public BookReviewController(BookReviewRepository reviews, BookRepository books, UserRepository users) {
-        this.reviews = reviews; this.books = books; this.users = users;
+    private final com.example.library.service.BookParticipationService participation;
+    public BookReviewController(BookReviewRepository reviews, BookRepository books, UserRepository users,
+                                com.example.library.service.BookParticipationService participation) {
+        this.reviews = reviews; this.books = books; this.users = users; this.participation = participation;
     }
     public record ReviewRequest(@Min(1) @Max(5) int rating, @Size(max = 1200) String comment) {}
     public record ReviewView(Long id, String reviewer, int rating, String comment, java.time.LocalDateTime createdAt) {}
@@ -38,11 +40,22 @@ public class BookReviewController {
         return new ReviewSummary(average, list.size(), list);
     }
 
+    public record Eligibility(boolean canReview) {}
+
+    @GetMapping("/eligibility")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    public Eligibility eligibility(Authentication auth, @PathVariable Long bookId) {
+        if (!books.existsById(bookId)) throw new ResourceNotFoundException("Không tìm thấy sách.");
+        return new Eligibility(participation.canReview(auth.getName(), bookId));
+    }
+
     @PutMapping
     @Transactional
     public ReviewView save(Authentication auth, @PathVariable Long bookId, @Valid @RequestBody ReviewRequest request) {
         User user = users.findByEmail(auth.getName()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản"));
         Book book = books.findById(bookId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sách"));
+        if (!participation.canReview(auth.getName(), bookId))
+            throw new org.springframework.security.access.AccessDeniedException("Bạn cần mua, mượn hoặc xác nhận đã đọc sách điện tử này trước khi đánh giá. Bạn vẫn có thể đặt câu hỏi.");
         BookReview review = reviews.findByBook_IdAndUser_Email(bookId, auth.getName()).orElseGet(BookReview::new);
         review.setBook(book); review.setUser(user); review.setRating(request.rating());
         review.setComment(request.comment() == null ? "" : request.comment().trim());

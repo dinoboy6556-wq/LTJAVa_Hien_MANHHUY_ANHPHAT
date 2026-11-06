@@ -9,6 +9,24 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface BookRepository extends JpaRepository<Book, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<Book> {
+    interface ChatBook {
+        Long getId();
+        String getTitle();
+        String getAuthor();
+        String getCategory();
+        Integer getAvailableQuantity();
+        java.math.BigDecimal getRentalPrice();
+        java.math.BigDecimal getSalePrice();
+    }
+
+    @Query("""
+        select b.id as id, b.title as title, a.name as author, c.name as category,
+               b.availableQuantity as availableQuantity, b.rentalPrice as rentalPrice, b.salePrice as salePrice
+        from Book b left join b.author a left join b.category c
+        order by b.availableQuantity desc, b.id desc
+        """)
+    List<ChatBook> findChatCatalog(org.springframework.data.domain.Pageable pageable);
+
     boolean existsByIsbn(String isbn);
     boolean existsByTitle(String title);
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)

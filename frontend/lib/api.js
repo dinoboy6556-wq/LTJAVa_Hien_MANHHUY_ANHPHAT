@@ -1,22 +1,23 @@
 ﻿const API_ROOT = '/api/v1';
 
 export async function apiRequest(path, options = {}) {
+  const { anonymous = false, ...requestOptions } = options;
   const method = (options.method || 'GET').toUpperCase();
   const headers = new Headers(options.headers || {});
   headers.set('Accept', 'application/json');
   if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-  if (typeof window !== 'undefined') {
+  if (!anonymous && typeof window !== 'undefined') {
     const token = localStorage.getItem('library_token');
     if (token) headers.set('Authorization', 'Bearer ' + token);
   }
   let response;
   try {
-    response = await fetch(API_ROOT + path, { ...options, method, headers, cache: 'no-store' });
+    response = await fetch(API_ROOT + path, { ...requestOptions, method, headers, cache: 'no-store' });
     const text = await response.text();
     let data = null;
     if (text) { try { data = JSON.parse(text); } catch { data = text; } }
 
-    if(response.status===401){['library_token','library_user'].forEach(k=>localStorage.removeItem(k));window.dispatchEvent(new Event('moc:session'));}
+    if(!anonymous&&response.status===401){['library_token','library_user'].forEach(k=>localStorage.removeItem(k));window.dispatchEvent(new Event('moc:session'));}
     if (!response.ok) throw new Error(data?.message || data?.error || (typeof data === 'string' ? data : 'API trả về HTTP ' + response.status));
     return data;
   } catch (error) {
@@ -26,6 +27,16 @@ export async function apiRequest(path, options = {}) {
 }
 
 export const api = {
+  reviewEligibility: id => apiRequest('/books/' + id + '/reviews/eligibility'),
+  questions: id => apiRequest('/books/' + id + '/questions'),
+  askQuestion: (id, question) => apiRequest('/books/' + id + '/questions', { method: 'POST', body: JSON.stringify({ question }) }),
+  recordReading: slug => apiRequest('/content/read/' + encodeURIComponent(slug) + '/record', { method: 'POST' }),
+  libraryChat: (message, history) => apiRequest('/library-chat', { method: 'POST', body: JSON.stringify({ message, history }) }),
+  purchases: () => apiRequest('/purchase-orders/my'),
+  purchase: body => apiRequest('/purchase-orders', { method: 'POST', body: JSON.stringify(body) }),
+  cancelPurchase: id => apiRequest('/purchase-orders/' + id + '/cancel', { method: 'POST' }),
+  requestPasswordCode: email => apiRequest('/auth/forgot-password', { anonymous: true, method: 'POST', body: JSON.stringify({ email }) }),
+  resetPassword: body => apiRequest('/auth/reset-password', { anonymous: true, method: 'POST', body: JSON.stringify(body) }),
   updateProfile: (body) => apiRequest('/profile',{method:'PUT',body:JSON.stringify(body)}),
   returnLoan: (id,itemIds) => apiRequest(`/loans/${id}/my-return`,{method:'POST',body:JSON.stringify({condition:'NORMAL',...(itemIds?{itemIds}:{})})}),
   renew: (id,days) => apiRequest(`/loans/${id}/renew`,{method:'POST',body:JSON.stringify({days})}),
@@ -72,4 +83,3 @@ export const api = {
 export function formatApiError(error) {
   return error?.message || 'Chưa thể kết nối thư viện. Vui lòng thử lại sau.';
 }
-

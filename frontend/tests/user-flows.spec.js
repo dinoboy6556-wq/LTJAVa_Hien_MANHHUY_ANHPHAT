@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 const book={id:1,title:'Java kiểm thử',author:{name:'Tác giả A'},category:{name:'Lập trình'},publisher:{name:'NXB'},isbn:'123',rentalPrice:15000,salePrice:90000,availableQuantity:4,totalQuantity:4};
 const profile={email:'reader@test.com',fullName:'Bạn đọc',phone:'0123456789',address:'Hà Nội',roles:['ROLE_USER']};
-async function setup(page,{guest=false}={}){let loans=[{id:1,status:'BORROWED',borrowDate:'2026-11-01',dueDate:'2099-11-20',rentalFee:30000,renewalCount:0,items:[{id:11,book,copy:{code:'BC-001'},quantity:1},{id:12,book,copy:{code:'BC-002'},quantity:1}]},{id:2,status:'RETURNED',borrowDate:'2026-10-01',dueDate:'2026-10-15',returnDate:'2026-10-10',items:[{id:21,book,copy:{code:'OLD-001'},quantity:1,returnedAt:'2026-10-10'}]}],favorites=[{id:5,book}],reservations=[],payments=[],calls=[];
+async function setup(page,{guest=false,eligible=true}={}){let loans=[{id:1,status:'BORROWED',borrowDate:'2026-11-01',dueDate:'2099-11-20',rentalFee:30000,renewalCount:0,items:[{id:11,book,copy:{code:'BC-001'},quantity:1},{id:12,book,copy:{code:'BC-002'},quantity:1}]},{id:2,status:'RETURNED',borrowDate:'2026-10-01',dueDate:'2026-10-15',returnDate:'2026-10-10',items:[{id:21,book,copy:{code:'OLD-001'},quantity:1,returnedAt:'2026-10-10'}]}],favorites=[{id:5,book}],reservations=[],payments=[],calls=[];
  await page.addInitScript(({guest,profile})=>{if(!guest){localStorage.setItem('library_token','test-token');localStorage.setItem('library_user',JSON.stringify(profile));}},{guest,profile});
  await page.route('**/api/v1/**',async route=>{const req=route.request(),path=new URL(req.url()).pathname.replace('/api/v1',''),method=req.method();let body;try{body=req.postDataJSON();}catch{}calls.push({path,method,body});let data={},status=200;
  if(path==='/auth/login')data={token:'test-token',...profile};
@@ -12,11 +12,17 @@ async function setup(page,{guest=false}={}){let loans=[{id:1,status:'BORROWED',b
  else if(path==='/books')data=[book,{...book,id:3,title:'Sách hết',availableQuantity:0}];
  else if(path==='/books/1'||path==='/books/3')data={...book,id:path.endsWith('3')?3:1,availableQuantity:path.endsWith('3')?0:4};
  else if(path.endsWith('/related'))data=[];
+ else if(path.endsWith('/reviews/eligibility'))data={canReview:eligible};
+ else if(path.endsWith('/questions'))data=method==='POST'?{id:1,reader:'Bạn đọc',question:body.question}:[];
+ else if(path.endsWith('/record'))data={message:'Đã lưu sách đã đọc.'};
  else if(path.endsWith('/reviews'))data=method==='PUT'?{id:10,reviewer:'Bạn đọc',...body}:{reviews:[],average:0,count:0};
  else if(path==='/favorites')data=favorites;
  else if(path.startsWith('/favorites/')){favorites=method==='DELETE'?[]:[{book}];data={book};}
  else if(path==='/loans/my-loans')data=loans;
- else if(path.endsWith('/my-return')){loans=loans.map(l=>l.id===1?{...l,items:l.items.map(i=>!body.itemIds||body.itemIds.includes(i.id)?{...i,returnedAt:'2026-11-03'}:i)}:l);loans=loans.map(l=>({...l,status:l.items.every(i=>i.returnedAt)?'RETURNED':l.status}));data=loans[0];}
+ else if(path.endsWith('/my-return')){
+   loans=loans.map(loan=>loan.id===1?{...loan,items:loan.items.map(item=>body.itemIds.includes(item.id)?{...item,returnRequestedAt:'2026-11-07T10:00:00'}:item)}:loan);
+   data=loans[0];
+ }
  else if(path.endsWith('/renew')){loans[0]={...loans[0],renewalCount:1};data=loans[0];}
  else if(path==='/fines/my-fines')data=[{id:1,loan:{id:1},reason:'Quá hạn',amount:10000,paid:false}];
  else if(path==='/notifications')data=[{message:'Sách sắp đến hạn',href:'/user/borrowed'}];
@@ -30,11 +36,31 @@ async function setup(page,{guest=false}={}){let loans=[{id:1,status:'BORROWED',b
  else if(path==='/content/read/java')data={title:'Sách điện tử',body:'Nội dung <script>alert(1)</script>'};
  else {status=404;data={message:path};}
  await route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
- });page.on('dialog',d=>d.accept());return calls;
+ });page.on('dialog',d=>d.accept());
+ calls.approveReturns=()=>{
+   loans=loans.map(loan=>({...loan,items:loan.items.map(item=>item.returnRequestedAt?{...item,returnedAt:'2026-11-07'}:item)}));
+   loans=loans.map(loan=>({...loan,status:loan.items.every(item=>item.returnedAt)?'RETURNED':loan.status}));
+ };
+ return calls;
 }
 test('card adds to cart, badge updates and cash checkout creates one request',async({page})=>{const calls=await setup(page);await page.goto('/books');await page.getByRole('button',{name:'Thêm vào giỏ',exact:true}).first().click();await expect(page.getByRole('link',{name:'Giỏ mượn, 1 quyển'})).toBeVisible();await page.getByRole('link',{name:'Giỏ mượn, 1 quyển'}).click();await expect(page.locator('.cart-total').getByText('15.000 đ')).toBeVisible();await page.getByLabel('Tôi đã đọc và đồng ý quy định mượn/trả sách',{exact:true}).check();await page.getByRole('button',{name:'Xác nhận mượn',exact:true}).click();await expect(page.getByText(/Đã tạo phiếu #9/)).toBeVisible();expect(calls.filter(c=>c.path==='/payments/cash')).toHaveLength(1);await expect(page.getByRole('heading',{name:'Giỏ mượn đang trống'})).toBeVisible();});
 test('PayOS configuration failure preserves cart and does not create fake loan',async({page})=>{const calls=await setup(page);await page.goto('/books/1');await page.getByRole('button',{name:'Mượn ngay',exact:true}).click();await page.getByRole('radio',{name:/Chuyển khoản ngân hàng/}).check();await page.getByLabel('Tôi đã đọc và đồng ý quy định mượn/trả sách',{exact:true}).check();await page.getByRole('button',{name:'Xác nhận mượn',exact:true}).click();await expect(page.locator('.cart-feedback').getByText('Chuyển khoản ngân hàng chưa được cấu hình')).toBeVisible();await expect(page.locator('.cart-book-title').filter({hasText:'Java kiểm thử'})).toBeVisible();expect(calls.some(c=>c.path==='/loans'&&c.method==='POST')).toBe(false);});
-test('partial return stays in active tab, full return moves to history',async({page})=>{await setup(page);await page.goto('/account/loans');await page.getByRole('button',{name:'Trả quyển này'}).first().click();await expect(page.getByRole('button',{name:'Trả quyển này'})).toHaveCount(1);await page.getByRole('button',{name:/Trả tất cả còn lại/}).click();await expect(page.getByRole('heading',{name:'Bạn chưa mượn cuốn sách nào'})).toBeVisible();await page.getByRole('link',{name:'Lịch sử đã trả'}).click();await expect(page.getByText('PHIẾU MƯỢN #1',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:/Trả quyển|Gia hạn/})).toHaveCount(0);});
+test('return requests wait for staff approval before moving to history',async({page})=>{
+ const calls=await setup(page);
+ await page.goto('/account/loans');
+ await page.getByRole('button',{name:'Yêu cầu trả',exact:true}).first().click();
+ await expect(page.getByText('Chờ kiểm tra và duyệt trả',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Yêu cầu trả',exact:true})).toHaveCount(1);
+ await expect(page.getByText('PHIẾU MƯỢN #1',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Yêu cầu trả còn lại/}).click();
+ await expect(page.getByText('Chờ kiểm tra và duyệt trả',{exact:true})).toHaveCount(2);
+ calls.approveReturns();
+ await page.getByRole('button',{name:'Làm mới',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Bạn chưa mượn cuốn sách nào'})).toBeVisible();
+ await expect(page.getByText('Trả sách thành công. Thư viện đã kiểm tra và duyệt yêu cầu của bạn.',{exact:true})).toBeVisible();
+ await page.getByRole('link',{name:'Lịch sử đã trả',exact:true}).click();
+ await expect(page.getByText('PHIẾU MƯỢN #1',{exact:true})).toBeVisible();
+});
 test('renewal sends selected days and removes used renewal control',async({page})=>{const calls=await setup(page);await page.goto('/account/loans');await page.getByLabel('Gia hạn',{exact:true}).selectOption('3');await page.getByRole('button',{name:'Xác nhận gia hạn'}).click();await expect(page.getByText('Đã sử dụng lượt gia hạn')).toBeVisible();expect(calls.find(c=>c.path==='/loans/1/renew').body).toEqual({days:3});});
 test('profile updates phone and address without losing roles',async({page})=>{const calls=await setup(page);await page.goto('/account/profile');await page.getByLabel('Điện thoại').fill('0987654321');await page.getByLabel('Địa chỉ').fill('TP HCM');await page.getByRole('button',{name:'Lưu hồ sơ'}).click();await expect(page.getByText('Đã cập nhật hồ sơ.')).toBeVisible();expect(calls.find(c=>c.path==='/profile'&&c.method==='PUT').body.address).toBe('TP HCM');});
 test('favorites can be removed and empty state is displayed',async({page})=>{await setup(page);await page.goto('/account/favorites');await page.getByRole('button',{name:'Bỏ yêu thích',exact:true}).click();await expect(page.getByText('Chưa có sách yêu thích.')).toBeVisible();});
@@ -43,7 +69,7 @@ test('guest reader uses content API and escapes HTML',async({page})=>{await setu
 test('guest borrow opens login without sending a loan request',async({page})=>{const calls=await setup(page,{guest:true});await page.goto('/books/1');await page.getByRole('button',{name:'Mượn ngay',exact:true}).click();await expect(page).toHaveURL(/\/login\?next=/);expect(calls.some(c=>c.path==='/loans')).toBe(false);});
 
 test('return query alone never marks payment paid or clears cart',async({page})=>{await setup(page);await page.goto('/books/1');await page.getByRole('button',{name:'Mượn ngay',exact:true}).click();await page.goto('/cart?vnp_ResponseCode=00&vnp_TransactionStatus=00');await expect(page.locator('.cart-book-title').filter({hasText:'Java kiểm thử'})).toBeVisible();await expect(page.getByText('Đã thanh toán',{exact:true})).toHaveCount(0);});
-test('review submission renders the saved review',async({page})=>{const calls=await setup(page);await page.goto('/books/1');await page.getByPlaceholder('Chia sẻ cảm nhận của bạn về cuốn sách…').fill('Sách rất hữu ích');await page.getByRole('button',{name:'Gửi bình luận',exact:false}).click();await expect(page.getByText('Sách rất hữu ích',{exact:true})).toBeVisible();expect(calls.find(c=>c.path==='/books/1/reviews'&&c.method==='PUT').body.rating).toBe(5);});
+test('review submission renders the saved review',async({page})=>{const calls=await setup(page);await page.goto('/books/1');await page.getByPlaceholder('Chia sẻ trải nghiệm với cuốn sách…').fill('Sách rất hữu ích');await page.getByRole('button',{name:'Gửi bình luận',exact:false}).click();await expect(page.getByText('Sách rất hữu ích',{exact:true})).toBeVisible();expect(calls.find(c=>c.path==='/books/1/reviews'&&c.method==='PUT').body.rating).toBe(5);});
 
 test('customer UI hides API panel, uses readable font and aligned card actions',async({page})=>{await setup(page);await page.goto('/books');await expect(page.getByText('API LIVE',{exact:true})).toHaveCount(0);const buttons=page.getByRole('button',{name:'Thêm vào giỏ',exact:true});await expect(buttons).toHaveCount(2);const boxes=await buttons.evaluateAll(nodes=>nodes.map(n=>({top:n.getBoundingClientRect().top,height:n.getBoundingClientRect().height,font:parseFloat(getComputedStyle(n).fontSize)})));expect(Math.abs(boxes[0].top-boxes[1].top)).toBeLessThan(2);expect(boxes[0].height).toBeGreaterThanOrEqual(44);expect(boxes[0].font).toBeGreaterThanOrEqual(13);});
 test('login returns reader to the book that required authentication',async({page})=>{await setup(page,{guest:true});await page.goto('/books/1');await page.getByRole('button',{name:'Mượn ngay',exact:true}).click();await page.getByPlaceholder('ban@email.com').fill('reader@test.com');await page.getByPlaceholder('Nhập mật khẩu').fill('password123');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await expect(page).toHaveURL(/\/books\/1$/);});
@@ -96,7 +122,7 @@ test('canceling an unpaid request keeps cart, clears old attempt and allows cash
 
 test('custom borrowing days validate bounds and calculate a rounded fee before cash checkout',async({page})=>{
  const calls=await setup(page);await page.goto('/books');await page.getByRole('button',{name:'Thêm vào giỏ',exact:true}).first().click();await page.goto('/cart');const days=page.getByRole('spinbutton',{name:'Số ngày mượn',exact:true}),submit=page.getByRole('button',{name:'Xác nhận mượn',exact:true});await page.getByLabel('Tôi đã đọc và đồng ý quy định mượn/trả sách',{exact:true}).check();
- for(const invalid of ['', '0','366','1.5']){await days.fill(invalid);await expect(submit).toBeDisabled();}await days.fill('7');await expect(page.locator('.cart-total')).toContainText('15.000 đ');await days.fill('17');await expect(page.locator('.cart-total')).toContainText('30.000 đ');await expect(page.locator('.cart-total-lines')).toContainText('17 ngày');await submit.click();await expect.poll(()=>calls.find(c=>c.path==='/payments/cash')?.body.days).toBe(17);
+ for(const invalid of ['', '0','366','1.5']){await days.fill(invalid);await expect(submit).toBeDisabled();}await days.fill('7');await expect(page.locator('.cart-total')).toContainText('7.500 đ');await days.fill('17');await expect(page.locator('.cart-total')).toContainText('18.215 đ');await expect(page.locator('.cart-total-lines')).toContainText('17 ngày');await submit.click();await expect.poll(()=>calls.find(c=>c.path==='/payments/cash')?.body.days).toBe(17);
 });
 test('footer aligns columns and separates contacts from deduplicated navigation',async({page})=>{
  await setup(page);await page.route('**/api/v1/content/public',r=>r.fulfill({json:[{id:1,kind:'MENU',title:'Khám phá sách',link:'/books'},{id:2,kind:'MENU',title:'Online',link:'/library'},{id:3,kind:'PAGE',title:'Liên hệ',slug:'lien-he'},{id:4,kind:'CONFIG',slug:'library-email',title:'Email liên hệ',body:'contact@example.com'},{id:5,kind:'CONFIG',slug:'library-address',title:'Địa chỉ',body:'Địa chỉ thư viện'}]}));await page.goto('/books');const footer=page.locator('.site-footer');await expect(footer.locator('.footer-contact')).toContainText('contact@example.com');await expect(footer.locator('.footer-link-group', {has:page.getByRole('heading',{name:'Khám phá',exact:true})}).getByRole('link',{name:'Khám phá sách',exact:true})).toHaveCount(1);
@@ -105,4 +131,32 @@ test('footer aligns columns and separates contacts from deduplicated navigation'
 
 test('borrowing requires explicit policy acceptance and includes the version in payment requests',async({page})=>{
  const calls=await setup(page);await page.goto('/books/1');await page.locator('.main-nav').getByRole('link',{name:'Quy định',exact:true}).click();await expect(page.locator('.borrowing-policy')).toContainText('50.000 đ / quyển');await page.goto('/books/1');await page.getByRole('button',{name:'Mượn ngay',exact:true}).click();const submit=page.getByRole('button',{name:'Xác nhận mượn',exact:true}),agree=page.getByLabel('Tôi đã đọc và đồng ý quy định mượn/trả sách',{exact:true});await expect(agree).not.toBeChecked();await expect(submit).toBeDisabled();await expect(page.locator('.borrowing-policy')).toContainText('10.000 đ / quyển / ngày');await expect(page.locator('.borrowing-policy')).toContainText('50.000 đ / quyển');expect(calls.some(c=>c.method==='POST'&&c.path.startsWith('/payments/'))).toBe(false);await agree.check();await expect(submit).toBeEnabled();await agree.uncheck();await expect(submit).toBeDisabled();await agree.check();await page.getByRole('radio',{name:/Chuyển khoản ngân hàng/}).check();await submit.click();await expect.poll(()=>calls.find(c=>c.path==='/payments/payos/checkout')?.body.policyAccepted).toBe(true);expect(calls.find(c=>c.path==='/payments/payos/checkout').body.policyVersion).toBe('2026-11-06-v1');
+});
+
+
+test('reader without participation can ask a question but sees no rating form',async({page})=>{
+ const calls=await setup(page,{eligible:false});
+ await page.goto('/books/1');
+ await expect(page.getByRole('button',{name:'Gửi bình luận',exact:false})).toHaveCount(0);
+ await page.getByLabel('Câu hỏi về sách',{exact:true}).fill('Sách có bản mới không?');
+ await page.getByRole('button',{name:'Gửi câu hỏi',exact:true}).click();
+ await expect(page.getByText('Sách có bản mới không?',{exact:true})).toBeVisible();
+ expect(calls.some(call=>call.path==='/books/1/reviews'&&call.method==='PUT')).toBe(false);
+});
+
+
+test('confirming a published ebook reading enables reviewing its linked book',async({page})=>{
+ await setup(page,{eligible:false});
+ let recorded=false;
+ await page.route('**/api/v1/content/read/java',route=>route.fulfill({json:{title:'Sách điện tử',kind:'EBOOK',bookId:1,body:'Chương một'}}));
+ await page.route('**/api/v1/content/read/java/record',route=>{
+   recorded=true;
+   return route.fulfill({json:{message:'Đã lưu sách đã đọc.'}});
+ });
+ await page.route('**/api/v1/books/1/reviews/eligibility',route=>route.fulfill({json:{canReview:recorded}}));
+ await page.goto('/read/java');
+ await page.getByRole('button',{name:'Xác nhận đã đọc',exact:true}).click();
+ await expect(page.getByText('Đã lưu sách đã đọc.',{exact:true})).toBeVisible();
+ await page.getByRole('link',{name:'Xem đánh giá và hỏi đáp',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Gửi bình luận',exact:false})).toBeVisible();
 });

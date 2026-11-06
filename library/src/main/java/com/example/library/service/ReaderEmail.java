@@ -5,6 +5,11 @@ import java.text.NumberFormat;
 import java.util.Locale;
 
 public record ReaderEmail(String recipient, String subject, String body) {
+    static ReaderEmail cashPaymentConfirmed(String recipient, BigDecimal amount, Long loanId) {
+        return new ReaderEmail(recipient, "Mộc Library | Thanh toán tại thư viện thành công",
+                "Thư viện đã xác nhận thu " + amount.toPlainString() + " đ cho phiếu mượn #" + loanId + ".");
+    }
+
     static ReaderEmail paymentConfirmed(String recipient, String reference, BigDecimal amount, Long loanId) {
         String total = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("vi-VN")).format(amount);
         return new ReaderEmail(recipient, "Mộc Library | Chuyển khoản thành công", """
@@ -15,6 +20,15 @@ public record ReaderEmail(String recipient, String subject, String body) {
 
                 Bạn có thể xem hạn trả trong mục Sách đang mượn.
                 """.formatted(reference, total, loanId));
+    }
+
+    static ReaderEmail passwordResetCode(String recipient, String code) {
+        return new ReaderEmail(recipient, "Mộc Library | Mã đặt lại mật khẩu", """
+                Mã xác nhận của bạn là %s.
+
+                Mã có hiệu lực trong 10 phút. Hãy nhập mã này trên trang Quên mật khẩu của Thư viện Mộc.
+                Nếu bạn không yêu cầu đặt lại mật khẩu, bạn có thể bỏ qua email này.
+                """.formatted(code));
     }
 
     static ReaderEmail passwordChanged(String recipient) {

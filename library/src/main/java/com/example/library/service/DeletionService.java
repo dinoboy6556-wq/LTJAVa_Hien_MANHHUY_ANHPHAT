@@ -5,6 +5,8 @@ import com.example.library.entity.*;import com.example.library.repository.*;impo
  public DeletionService(EntityManager em,BookRepository books,BookCopyRepository copies,CopyEventRepository events,ObjectMapper json){this.em=em;this.books=books;this.copies=copies;this.events=events;this.json=json;}
  @Transactional public void deleteBook(Long id){
   var book=books.findForUpdate(id).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy sách"));
+  if(em.createQuery("select count(p) from PurchaseOrder p where p.book.id = :id",Long.class).setParameter("id",id).getSingleResult()>0)
+   throw new IllegalStateException("Sách đã có đơn mua nên không thể xóa.");
   for(String entity:List.of("LoanItem","SaleItem","Favorite","Reservation","BookReview","BookReaction"))if(em.createQuery("select count(x) from "+entity+" x where x.book.id=:id",Long.class).setParameter("id",id).getSingleResult()>0)throw new IllegalStateException("Không thể xóa sách đã có phiếu mượn, hóa đơn, yêu thích, đăng ký chờ hoặc đánh giá. Hãy giữ lại để bảo toàn dữ liệu.");
   if(em.createQuery("select count(x) from LibraryContent x where x.bookId=:id",Long.class).setParameter("id",id).getSingleResult()>0)throw new IllegalStateException("Sách còn liên kết nội dung đọc online");
   for(var p:em.createQuery("select p from BorrowPayment p where p.status in ('PENDING','REVIEW_REQUIRED')",BorrowPayment.class).getResultList())try{for(var item:json.readTree(p.getRequestJson()).path("items"))if(item.path("bookId").asLong()==id)throw new IllegalStateException("Sách đang nằm trong giao dịch chờ xử lý");}catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new IllegalStateException("Cần kiểm tra giao dịch chưa hoàn tất trước khi xóa");}

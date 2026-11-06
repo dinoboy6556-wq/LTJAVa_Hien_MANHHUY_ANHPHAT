@@ -51,7 +51,7 @@ $env:MAIL_HOST='smtp.gmail.com'
 $env:MAIL_PORT='587'
 $env:MAIL_USERNAME='your.gmail@gmail.com'
 $env:MAIL_PASSWORD='your-16-char-app-password'
-$env:MAIL_FROM='your.gmail@gmail.com'
+$env:LIBRARY_MAIL_ENABLED='true'
 ```
 
 Lưu ý: với Gmail, `MAIL_PASSWORD` phải là App Password, không phải mật khẩu chính của tài khoản Google.
