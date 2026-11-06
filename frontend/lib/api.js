@@ -1,4 +1,4 @@
-const API_ROOT = '/api/v1';
+﻿const API_ROOT = '/api/v1';
 
 export async function apiRequest(path, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
@@ -47,6 +47,8 @@ export const api = {
   categories: () => apiRequest('/categories'),
   login: (body) => apiRequest('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
   register: (body) => apiRequest('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
+  sendPasswordOtp: () => apiRequest('/auth/change-password/send-otp', { method: 'POST' }),
+  changePassword: (body) => apiRequest('/auth/change-password', { method: 'POST', body: JSON.stringify(body) }),
   loans: () => apiRequest('/loans/my-loans'),
   borrow: (body) => apiRequest('/loans', { method: 'POST', body: JSON.stringify(body) }),
   favorites: () => apiRequest('/favorites'),
@@ -60,3 +62,4 @@ export const api = {
 export function formatApiError(error) {
   return error?.message || 'Chưa thể kết nối thư viện. Vui lòng thử lại sau.';
 }
+

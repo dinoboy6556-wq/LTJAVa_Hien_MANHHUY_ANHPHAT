@@ -10,8 +10,8 @@ import java.math.BigDecimal;
 import java.time.*;
 @Service
 public class BorrowCheckoutService {
- private final BorrowPaymentRepository payments;private final UserRepository users;private final BookRepository books;private final BookCopyRepository copies;private final LoanService loans;private final VnpayGateway gateway;private final ObjectMapper json;
- public BorrowCheckoutService(BorrowPaymentRepository payments,UserRepository users,BookRepository books,BookCopyRepository copies,LoanService loans,VnpayGateway gateway,ObjectMapper json){this.payments=payments;this.users=users;this.books=books;this.copies=copies;this.loans=loans;this.gateway=gateway;this.json=json;}
+private final BorrowPaymentRepository payments;private final UserRepository users;private final BookRepository books;private final BookCopyRepository copies;private final LoanService loans;private final VnpayGateway gateway;private final ObjectMapper json;private final EmailService emailService;
+public BorrowCheckoutService(BorrowPaymentRepository payments,UserRepository users,BookRepository books,BookCopyRepository copies,LoanService loans,VnpayGateway gateway,ObjectMapper json,EmailService emailService){this.payments=payments;this.users=users;this.books=books;this.copies=copies;this.loans=loans;this.gateway=gateway;this.json=json;this.emailService=emailService;}
  private LocalDateTime now(){return LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));}
  private BigDecimal quote(LoanCreateRequest request){
   if(request.getDays()==null||request.getDays()<1||request.getDays()>365||request.getItems()==null||request.getItems().isEmpty()||request.getItems().size()>50)throw new IllegalArgumentException("Giỏ tối đa 50 đầu sách, thời hạn 1–365 ngày");
@@ -56,7 +56,12 @@ public class BorrowCheckoutService {
   if(!"CASH".equals(payment.getMethod()))throw new IllegalArgumentException("Chỉ xác nhận tiền mặt tại quầy; VNPay được xác nhận tự động");
   if("PAID".equals(payment.getStatus()))return payment;
   if(!"UNPAID".equals(payment.getStatus()))throw new IllegalStateException("Trạng thái giao dịch không hợp lệ");
-  payment.setStatus("PAID");payment.setConfirmedBy(admin);payment.setConfirmedAt(now());payment.setMessage("Đã thu tiền trực tiếp tại thư viện");return payment;
+  payment.setStatus("PAID");payment.setConfirmedBy(admin);payment.setConfirmedAt(now());payment.setMessage("Đã thu tiền trực tiếp tại thư viện");
+  if(payment.getUser()!=null&&payment.getLoanId()!=null){
+   try{emailService.sendPaymentSuccess(payment.getUser().getEmail(), String.valueOf(payment.getLoanId()), payment.getAmount().toPlainString()+" đ", "Tiền mặt");}
+   catch(Exception ignored){ }
+  }
+  return payment;
  }
  private Map<String,String> reply(String code,String message){return Map.of("RspCode",code,"Message",message);}
  @Transactional public Map<String,String> ipn(Map<String,String> params){
@@ -70,6 +75,9 @@ public class BorrowCheckoutService {
   LoanCreateRequest request;try{request=json.readValue(payment.getRequestJson(),LoanCreateRequest.class);}catch(Exception e){throw new IllegalStateException("Invalid stored order",e);}
   try{if(!payment.getUser().isEnabled()||quote(request).compareTo(payment.getAmount())!=0)throw new IllegalStateException("Tài khoản hoặc giá sách đã thay đổi");}
   catch(IllegalStateException|IllegalArgumentException e){payment.setStatus("REVIEW_REQUIRED");payment.setMessage("Đã nhận thanh toán nhưng chưa tạo phiếu: "+e.getMessage()+". Liên hệ thư viện để xử lý/hoàn tiền.");return reply("00","Confirmed for review");}
-  var loan=loans.createForUser(request,payment.getUser().getEmail());payment.setLoanId(loan.getId());payment.setStatus("PAID");payment.setMessage("Đã thanh toán và tạo phiếu #"+loan.getId());return reply("00","Confirmed");
+  var loan=loans.createForUser(request,payment.getUser().getEmail());payment.setLoanId(loan.getId());payment.setStatus("PAID");payment.setMessage("Đã thanh toán và tạo phiếu #"+loan.getId());
+  try{emailService.sendPaymentSuccess(payment.getUser().getEmail(), String.valueOf(loan.getId()), payment.getAmount().toPlainString()+" đ", "VNPay");}
+  catch(Exception ignored){ }
+  return reply("00","Confirmed");
  }
 }
