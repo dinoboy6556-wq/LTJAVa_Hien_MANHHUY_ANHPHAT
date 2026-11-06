@@ -31,3 +31,13 @@ Dữ liệu chia sẻ cho nhóm: `database/sample_catalog_20.json`. Sau khi ch�
 Script hỏi mật khẩu quản trị, không lưu mật khẩu/token vào file. Có thể truyền `-AdminEmail` nếu dùng tài khoản khác, `-ApiBaseUrl` nếu backend khác cổng. Script nhận diện theo tên danh mục và mã DEMO của sách nên chạy lại không tạo trùng; không tự sửa đè dữ liệu đã chỉnh bằng giao diện. Không cần bật app.seed.test-data cho bộ này (seed cũ tạo bộ dữ liệu khác).
 
 Đã kiểm tra chạy lại tạo 0 bản ghi mới, đủ 100 mã quyển, không có liên kết thể loại/tác giả/NXB bị thiếu và danh mục 23 sách chia 2 trang (12 + 11).
+
+## Nội dung online / cấu hình / menu
+
+Bộ sample_library_content.json và seed_library_content.ps1 bổ sung 21 mục, không thêm bảng/cột: 3 bài đọc điện tử do nhóm biên soạn, 3 bài viết, 4 trang thông tin, 6 cấu hình công khai, 5 menu. Chạy từ gốc project `.\database\seed_library_content.ps1` sau khi backend khởi động. Script hỏi mật khẩu, bỏ qua slug có sẵn và không tạo hóa đơn hoặc doanh thu giả. Thông tin liên hệ là mẫu cần cập nhật. Xem library/docs/ADMIN_MODULES_COMPLETION_20261106.md.
+
+## Bỏ nhãn hiển thị Demo/mẫu
+
+Đã bỏ các nhãn này khỏi tên, mô tả, nội dung, bìa và tiền tố mã sách của dữ liệu đã nạp. ID bản ghi, quan hệ mượn/trả, tồn kho và giá giữ nguyên. Mã 20 sách hiện là 20261106-01 đến 20261106-20 (mã nội bộ, không phải ISBN xuất bản thật). Bộ JSON/script đã đồng bộ; chạy lại không tạo trùng.
+
+Thành viên đã nạp bộ cũ chạy `database/cleanup_display_labels.sql` trước khi nạp lại, sau đó pull các SVG bìa mới. Script chỉ đổi giá trị khớp nhãn cũ, không xóa bản ghi hay thay lịch sử. Với database mới, nạp JSON hiện tại như hướng dẫn. Ảnh bìa vẫn giữ đường dẫn cũ để tránh gãy liên kết.

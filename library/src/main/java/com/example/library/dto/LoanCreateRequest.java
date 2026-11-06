@@ -14,4 +14,7 @@ public class LoanCreateRequest {
 
     @NotNull @Min(1)
     private Integer days = 14;
+
+    private boolean policyAccepted;
+    private String policyVersion;
 }

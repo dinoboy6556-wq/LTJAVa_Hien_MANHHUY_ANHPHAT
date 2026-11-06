@@ -4,7 +4,7 @@ Giao diện hiển thị **Chuyển khoản ngân hàng**. Phương thức nội
 
 ## Điền cấu hình sau
 
-Không gửi khóa lên chat. Chọn một trong hai cách:
+Không gửi khóa lên chat. Profile mặc định hiện là local, nên chạy bình thường cũng đọc application-local.properties. Có thể chọn profile khác bằng SPRING_PROFILES_ACTIVE khi triển khai. Chọn một trong hai cách:
 
 1. Sao chép `library/src/main/resources/application-local.properties.example` thành `application-local.properties` cùng thư mục, điền Client ID, API Key, Checksum Key vào 3 dòng `app.payos.*`. File đích đã được .gitignore. Tại thư mục library chạy:
 
@@ -63,3 +63,27 @@ Nguồn: https://payos.vn/docs/api/ và https://payos.vn/docs/tich-hop-webhook/k
 - Next production build qua; ESLint 0 lỗi, còn 4 cảnh báo có sẵn về ảnh avatar và import chưa dùng.
 - Backend khởi động với schema validate và seed=false, không áp seed hoặc thay schema dữ liệu thật. API PayOS khi thiếu khóa trả 409 với thông báo chưa cấu hình; danh mục API trả đúng cấu trúc phân trang.
 - Chưa thử chuyển tiền ngân hàng thật vì chưa có khóa/kênh/webhook công khai.
+
+## Sửa cấu hình local và xác minh kết nối thật
+
+Ngày 06/11/2026: file local đã có khóa nhưng tiến trình trước không bật profile local. Đã đặt spring.profiles.default=local để lệnh chạy thường đọc file cấu hình riêng. Không đưa khóa thật vào source. Khi triển khai đặt SPRING_PROFILES_ACTIVE theo môi trường.
+
+Đã tạo được liên kết PayOS thật (HTTP 200), truy vấn/đối soát qua backend thành công, hủy đúng liên kết thử trên PayOS (HTTP 200) rồi đối soát về FAILED, loanId=null. Không chuyển tiền và không tạo phiếu thử. Đây là kiểm tra kết nối/tạo link/hủy; chưa chứng minh thanh toán tiền thật hoặc webhook công khai đã hoạt động. Độc giả có thể thanh toán qua link; sau khi quay về dùng Kiểm tra trạng thái để đối soát. Để tự nhận thanh toán khi đóng web, vẫn cần đăng ký webhook HTTPS công khai ở phần trên.
+
+## Hủy QR và tiếp tục thanh toán
+
+Giỏ có khu vực Yêu cầu mượn chưa thanh toán, nút Xem lại sách và Tiếp tục thanh toán. Dữ liệu sách/thời hạn lưu ở server; xem lại có thể khôi phục giỏ sau khi xác nhận. Link còn PENDING được tiếp tục; link CANCELLED/EXPIRED và chưa nhận tiền sẽ tạo lần thanh toán mới, giữ nguyên lịch sử cũ. Mã retry ổn định ngăn bấm hai lần tạo nhiều đơn. Nếu phí/tồn kho đổi hoặc đã nhận một phần tiền, chặn để người dùng kiểm tra/đối soát. Không tự đánh dấu đã trả theo query return.
+
+Giỏ tự đối soát khi mở/quay lại, khi focus và mỗi 8 giây nếu còn giao dịch chờ, không poll khi tab ẩn. PAID hiển thị ngay và xóa đúng giỏ trùng snapshot; dừng định kỳ khi không còn PENDING. Khi đóng web cần webhook HTTPS công khai để cập nhật độc lập.
+
+Đã thử với PayOS thật: tạo link → hủy → tiếp tục mở link mới → bấm tiếp tục lần nữa vẫn cùng link mới, phí giữ nguyên; cả hai link thử đã hủy và không chuyển tiền. Kiểm thử tự động xác minh PAID, callback lặp, hủy, nhận một phần và tự cập nhật browser. Chưa thực hiện giao dịch chuyển tiền thật trong lần này.
+
+## Chủ động hủy yêu cầu để đặt lại hoặc đổi phương thức
+
+Nút Hủy yêu cầu đối soát với PayOS trước, hủy link còn hiệu lực rồi mới ghi CANCELLED tại local. Nếu đã có tiền/đang xử lý/không xác minh được thì chặn hủy và giữ trạng thái để tránh đặt trùng. Link đã hủy ở PayOS nhưng vẫn muốn trả tiếp dùng Tiếp tục thanh toán; còn Hủy yêu cầu là chấm dứt yêu cầu, không tiếp tục lại.
+
+Sau khi hủy yêu cầu: gỡ khỏi nhóm chưa thanh toán, giữ lịch sử Đã hủy yêu cầu, giữ sách trong giỏ, xóa mã attempt local. Khách có thể đổi số lượng, đặt mới hoặc chuyển sang trực tiếp. Không xóa bản ghi tài chính; tiền đến muộn vẫn đi vào đối soát REVIEW_REQUIRED. Không thêm bảng/cột, dùng status VARCHAR đã có.
+
+## Xác minh bản cập nhật cuối
+
+124 test backend, 48 test JavaScript và 36 test browser đều qua; Next production build qua, lint không có lỗi (4 cảnh báo ảnh avatar/import có sẵn). Đã thử PayOS thật cho tạo link, hủy QR, mở link mới, lặp tiếp tục không tạo trùng và Hủy yêu cầu về CANCELLED. Các link thử đều đã hủy, không chuyển tiền hoặc tạo phiếu thử. Tự PAID được kiểm thử bằng mock/webhook, không giả mạo thanh toán trên dữ liệu thật. Kiểm tra đủ dữ liệu nội dung đã nạp 21 mục và chạy lại không trùng. Không thêm bảng/cột và không commit khóa local.

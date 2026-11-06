@@ -13,7 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin/reports")
-@PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
+@PreAuthorize("hasRole('ADMIN')")
 @Transactional(readOnly = true)
 public class AdminReportController {
     private final BookRepository books;

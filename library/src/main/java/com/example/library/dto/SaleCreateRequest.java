@@ -7,6 +7,6 @@ import java.util.List;
 
 @Data
 public class SaleCreateRequest {
-    @NotEmpty
+    @NotEmpty @jakarta.validation.constraints.Size(max=50)
     private List<@Valid SaleItemRequest> items;
 }

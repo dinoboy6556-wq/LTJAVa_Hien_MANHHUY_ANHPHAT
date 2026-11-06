@@ -19,12 +19,17 @@ public class SaleController {
     private SaleService saleService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Sale>> getAllSales() {
         return ResponseEntity.ok(saleService.getAllSales());
     }
 
+    public record CounterSale(@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Email String buyerEmail, @jakarta.validation.constraints.NotNull @Valid SaleCreateRequest order, @jakarta.validation.constraints.AssertTrue(message="Chỉ lập hóa đơn sau khi xác nhận đã thu tiền") boolean paymentCollected) {}
+    @PostMapping("/counter") @PreAuthorize("hasRole('ADMIN')")
+    public Sale counter(@Valid @RequestBody CounterSale request){return saleService.createForBuyer(request.order(),request.buyerEmail().trim().toLowerCase(java.util.Locale.ROOT));}
+
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Sale> createSale(@Valid @RequestBody SaleCreateRequest request) {
         return ResponseEntity.ok(saleService.createSale(request));
     }

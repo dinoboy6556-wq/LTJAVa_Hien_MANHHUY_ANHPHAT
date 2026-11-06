@@ -13,7 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/v1/statistics")
-@PreAuthorize("hasAnyRole('ADMIN', 'LIBRARIAN')")
+@PreAuthorize("hasRole('ADMIN')")
 public class StatisticsController {
 
     @Autowired

@@ -15,7 +15,7 @@ class Element{
 function setup(roles=['ROLE_ADMIN'], loans=[],copyStatus='BORROWED'){const nodes=new Map(),calls=[];const get=id=>{if(!nodes.has(id))nodes.set(id,new Element());return nodes.get(id);};const books=Array.from({length:12},(_,i)=>({id:i+1,title:`Book ${i+1}`,availableQuantity:i%2,totalQuantity:1}));
  vm.runInNewContext(source,{Node:Element,FormData,document:{getElementById:get,createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag),addEventListener:(_,f)=>f(),querySelectorAll:selector=>selector==='[data-section]'?get('adminNav').children:[]},localStorage:{getItem:()=> 'token',removeItem(){}},location:{},confirm:()=>true,setTimeout,URL,fetch:async(url,options)=>{calls.push({url,options});return {status:200,ok:true,json:async()=>url.endsWith('/profile')?{roles,fullName:'Admin',email:'admin@test'}:url.endsWith('/summary')?{totalBooks:12}:url.endsWith('/books')?books:url.endsWith('/copies')?[{id:91,code:'COPY-91',status:copyStatus}]:url.endsWith('/loans')?loans:[]};}});return {get,calls};}
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
-test('admin navigation loads, filters and paginates inventory',async()=>{const app=setup();await flush();assert.equal(app.get('adminNav').children.length,16);app.get('adminNav').children.find(b=>b.dataset.section==='books').events.click();await flush();assert.equal(app.get('adminRows').children.length,10);app.get('adminNext').events.click();assert.equal(app.get('adminRows').children.length,2);app.get('adminSearch').value='Book 12';app.get('adminSearch').events.input();assert.equal(app.get('adminRows').children.length,1);assert.match(app.get('adminPage').textContent,/1 kết quả/);});
+test('admin navigation loads, filters and paginates inventory',async()=>{const app=setup();await flush();assert.equal(app.get('adminNav').children.length,16);app.get('adminNav').children.find(b=>b.dataset.section==='books').events.click();await flush();assert.equal(app.get('adminRows').children.length,10);assert.equal(app.get('adminRows').children[0].children[2].textContent,'Book 12');app.get('adminNext').events.click();assert.equal(app.get('adminRows').children.length,2);assert.equal(app.get('adminRows').children[0].children[0].textContent,'11');app.get('adminSearch').value='Book 12';app.get('adminSearch').events.input();assert.equal(app.get('adminRows').children.length,1);assert.match(app.get('adminPage').textContent,/1 kết quả/);});
 test('reader cannot initialize management sections',async()=>{const app=setup(['ROLE_USER']);await flush();assert.equal(app.get('adminNav').children.length,0);assert.match(app.get('adminMessage').textContent,/không có quyền/);assert.equal(app.calls.length,1);});
 test('librarian has operations but no user management',async()=>{const app=setup(['ROLE_LIBRARIAN']);await flush();assert.equal(app.get('adminNav').children.some(b=>b.dataset.section==='users'),false);assert.equal(app.get('adminNav').children.some(b=>b.dataset.section==='loans'),true);});
 
@@ -61,13 +61,25 @@ test('librarian can update available copy status through inventory',async()=>{
  assert.ok(app.calls.some(call=>call.options?.method==='PATCH'));assert.equal(app.get('adminDialog').open,true);
 });
 
-test('reports is always the final management tab for admin and librarian',async()=>{
- for(const role of ['ROLE_ADMIN','ROLE_LIBRARIAN']){const app=setup([role]);await flush();assert.equal(app.get('adminNav').children.at(-1).dataset.section,'reports');}
+test('admin keeps reports last and librarian sees only book-management tabs',async()=>{
+ const admin=setup(['ROLE_ADMIN']);await flush();assert.equal(admin.get('adminNav').children.at(-1).dataset.section,'reports');
+ const librarian=setup(['ROLE_LIBRARIAN']);await flush();assert.deepEqual(librarian.get('adminNav').children.map(b=>b.dataset.section),['categories','books','publishers','authors','loans','ebooks']);assert.equal(librarian.get('sectionTitle').textContent,'Sách & tồn kho');
 });
 
 test('inventory row shows cover column and icon actions retain accessible labels',async()=>{
  const app=setup();await flush();app.get('adminNav').children.find(b=>b.dataset.section==='books').events.click();await flush();
- assert.equal(app.get('adminHead').children[0].children[0].textContent,'Ảnh bìa');
+ assert.equal(app.get('adminHead').children[0].children[0].textContent,'STT');
+ assert.equal(app.get('adminHead').children[0].children[1].textContent,'Ảnh bìa');
  const buttons=app.get('adminRows').children[0].querySelectorAll('button');assert.equal(buttons.length,3);
  for(const label of ['Từng quyển / nhập sách','Sửa đầu sách','Xóa đầu sách']){const button=buttons.find(b=>b.attributes['aria-label']===label);assert.ok(button);assert.equal(button.title,label);assert.equal(button.children[0].tagName,'svg');assert.ok(button.events.click);}
+});
+
+test('loan list sorts by ticket number from lowest to highest',async()=>{
+ const make=(id,date)=>({id,status:'BORROWED',borrowDate:date,dueDate:'2099-12-31',items:[]});const app=setup(['ROLE_ADMIN'],[make(2,'2026-11-05'),make(1,'2026-11-06'),make(3,'2026-11-06')]);await flush();app.get('adminNav').children.find(b=>b.dataset.section==='loans').events.click();await flush();assert.deepEqual(app.get('adminRows').children.map(row=>row.children[0].textContent),['#1','#2','#3']);
+});
+test('inspection shows recorded condition and requires choosing a condition before accepting returns',async()=>{
+ const loan={id:42,status:'BORROWED',items:[{id:11,book:{id:1,title:'Java'},copy:{id:91,code:'COPY-91'},quantity:1},{id:12,book:{id:1,title:'Java'},copy:{id:92,code:'COPY-92'},quantity:1,returnedAt:'2026-11-05',returnCondition:'DAMAGED'}]};
+ const app=setup(['ROLE_ADMIN'],[loan]);await flush();app.get('adminNav').children.find(b=>b.dataset.section==='loans').events.click();await flush();const controls=app.get('adminRows').children[0].querySelectorAll('button');await controls.find(b=>b.attributes['aria-label']==='Kiểm tra sách').events.click();assert.equal(app.get('dialogTitle').textContent,'Kiểm tra sách — phiếu #42');const inspection=app.get('dialogBody').children[2].children[0].children[1];assert.equal(inspection.children[1].children[3].textContent,'Hỏng');
+ await app.get('dialogBody').querySelectorAll('button').find(b=>b.textContent==='Kiểm tra và nhận trả').events.click();const form=app.get('dialogBody').children.find(n=>n.tagName==='form');const select=form.querySelectorAll('select')[0];assert.equal(select.value,'');assert.equal(select.required,true);await form.events.submit({preventDefault(){}});assert.match(app.get('dialogMessage').textContent,/chọn tình trạng/);assert.equal(app.calls.some(c=>c.options.method==='POST'),false);
+ select.value='DAMAGED';await form.events.submit({preventDefault(){}});const post=app.calls.find(c=>c.options.method==='POST');assert.equal(JSON.parse(post.options.body).condition,'DAMAGED');assert.deepEqual(JSON.parse(post.options.body).itemIds,[11]);
 });

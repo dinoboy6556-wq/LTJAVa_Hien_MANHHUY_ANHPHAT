@@ -9,6 +9,6 @@ public class SaleItemRequest {
     @NotNull
     private Long bookId;
 
-    @NotNull @Min(1)
+    @NotNull @Min(1) @jakarta.validation.constraints.Max(100)
     private Integer quantity;
 }
