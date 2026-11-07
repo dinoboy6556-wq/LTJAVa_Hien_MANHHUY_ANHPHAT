@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import BookShelf from '../../components/book-shelf';
+import BookShelf from '../../features/catalog/book-shelf';
 
 export default async function BooksPage({ searchParams }) {
   const params = await searchParams;

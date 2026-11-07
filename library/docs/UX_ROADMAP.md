@@ -10,7 +10,7 @@ Frontend độc giả đang chuyển sang Next.js App Router trong `frontend/`, 
 - Lỗi khoảng giá, trạng thái không có kết quả và nút xóa bộ lọc.
 - Bộ lọc và header thích ứng điện thoại/tablet, vùng chạm 44px, focus bàn phím, bảng mã quyển có thể cuộn ngang.
 - Mượn sách có xác nhận số lượng/số ngày trước gửi; đã có trạng thái tải, ngăn gửi trùng, báo lỗi tồn kho và chuyển tới phiếu mượn sau thành công.
-- Luồng mã quyển/mượn/trả/bán có test tích hợp. Chuyển dữ liệu cũ theo BOOK_COPIES.md trước sử dụng.
+- Luồng mã quyển/mượn/trả/bán có test tích hợp. Cài đặt database theo DATABASE.md trước sử dụng.
 - Lưu sách yêu thích theo tài khoản; thêm/xóa và trang xem danh sách.
 - Gia hạn một lần thêm 7 ngày nếu phiếu còn hạn và không có khoản phạt chưa thanh toán.
 - Độc giả xem trạng thái khoản phạt; thủ thư/quản trị có thể ghi nhận đã thanh toán.

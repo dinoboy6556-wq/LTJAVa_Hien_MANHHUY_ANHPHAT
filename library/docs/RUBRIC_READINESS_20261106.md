@@ -19,7 +19,7 @@
 - Validation đầu vào, từ chối liên kết sai, lỗi dữ liệu trả thông báo thay vì chi tiết SQL.
 - Phân trang danh mục ở backend và frontend; đổi mật khẩu trong hồ sơ.
 - Bảo mật JWT, cấu hình secret, security headers; giữ compatibility APP_JWT_SECRET nhưng ưu tiên JWT_SECRET. Nếu không có secret dùng khóa ngẫu nhiên từng lần chạy: phải đăng nhập lại sau restart. Nên đặt secret riêng >=32 byte ở môi trường.
-- Seed dữ liệu tùy chọn có quy mô lớn hơn (xem database/test_data.md); không áp vào dữ liệu thật của máy hiện tại.
+Cài đặt database bằng file duy nhất `database/library_db.sql`. Xem [hướng dẫn database](DATABASE.md). File khởi tạo sẽ xóa và tạo lại các bảng, cần sao lưu trước khi import; không chạy trên dữ liệu cần giữ.
 - Menu: Tổng quan → Thể loại sách → Sách & tồn kho → Nhà xuất bản → Tác giả → nghiệp vụ còn lại → Báo cáo cuối cùng.
 - PayOS: xem PAYOS_BANK_TRANSFER.md; không thêm bảng/cột ở đợt này.
 

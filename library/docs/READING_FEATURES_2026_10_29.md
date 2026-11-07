@@ -2,10 +2,10 @@
 
 ## Cập nhật database cho nhóm
 1. Dừng các phiên backend đang chạy; sao lưu library_db bằng Export SQL trong Laragon/HeidiSQL.
-2. Chạy file `database/upgrade_reading_features_20261029.sql` tại gốc project. Chạy được nhiều lần, không xóa dữ liệu.
+Cài đặt database bằng file duy nhất `database/library_db.sql`. Xem [hướng dẫn database](DATABASE.md). File khởi tạo sẽ xóa và tạo lại các bảng, cần sao lưu trước khi import; không chạy trên dữ liệu cần giữ.
 3. Khởi động lại backend, Ctrl+F5 trên trình duyệt.
 
-Thêm cột loan_items.returned_at (DATE) và return_condition (VARCHAR). Thêm bảng reservations (mỗi tài khoản/đầu sách một đăng ký) và copy_events (nhật ký trạng thái từng quyển). Script cập nhật ngày trả cho các phiếu cũ đã hoàn tất; không suy đoán tình trạng cũ. Hibernate ddl-auto=update có thể tạo cấu trúc nhưng không thay thế bước cập nhật dữ liệu cũ trong script.
+Cấu trúc này đã có đầy đủ trong file khởi tạo hợp nhất. Dữ liệu giao dịch cũ không được đưa vào bộ khởi tạo.
 
 ## Sử dụng
 - Admin > Phiếu mượn > Nhận trả: chọn quyển cần trả và tình trạng. Nếu tình trạng khác nhau, trả theo từng nhóm. Phiếu vẫn đang mượn đến khi trả hết; phạt chỉ tính cho những quyển trả lần đó và cộng dồn vào phiếu. Gửi lại quyển đã trả bị từ chối.

@@ -1,6 +1,6 @@
 # Duyệt trả sách và quyền đánh giá
 
-Chạy database/upgrade_return_requests_and_discussions.sql trên library_db trước khi chạy backend. Script chạy lại được và giữ dữ liệu hiện có.
+Cài đặt database bằng file duy nhất `database/library_db.sql`. Xem [hướng dẫn database](DATABASE.md). File khởi tạo sẽ xóa và tạo lại các bảng, cần sao lưu trước khi import; không chạy trên dữ liệu cần giữ.
 
 ## Thay đổi database
 
@@ -22,7 +22,7 @@ Sau khi đọc sách điện tử đã xuất bản, bấm Xác nhận đã đ�
 
 ## Tổ chức frontend
 
-- components/book-discussion.jsx chứa đánh giá và hỏi đáp.
+- frontend/features/book-discussion/ chứa giao diện đánh giá, hỏi đáp và hook gọi API.
 - components/loan-card.jsx chứa thao tác trên từng phiếu mượn.
 - components/loan-list.jsx chứa danh sách và theo dõi cập nhật trả sách.
 - app/read/[slug]/page.jsx trình bày trang đọc và xác nhận đã đọc.
