@@ -12,6 +12,15 @@ Không còn trang độc giả Thymeleaf; /user/... cũ chỉ redirect sang rout
 Danh sách trang: /, /books, /books/{id}, /login, /register, /cart, /account/profile, /account/favorites, /account/loans, /account/history, /library, /read/{slug}.
 Mọi API frontend đi qua lib/api.js; Xem lời gọi API bằng tab Network của trình duyệt.
 
+## Vị trí mã giao diện
+
+- `app/` giữ các tuyến Next.js và lắp ghép màn hình.
+- `features/borrow-cart/` chứa danh sách giỏ, tóm tắt phí, giao dịch và hook `useBorrowCheckout`.
+- `features/catalog/` chứa thẻ sách dùng ở trang chủ, khám phá và yêu thích, bộ lọc và hook `useCatalog`.
+- `features/book-discussion/` tách form đánh giá, hỏi đáp và hook `useBookDiscussion`.
+- `features/assistant/` tách danh sách tin nhắn, ô gửi, kiểu giao diện và hook `useLibraryChat`.
+- `components/` chứa các thành phần dùng chung như header và footer. `lib/` chứa HTTP client, phiên đăng nhập và lưu giỏ.
+
 ## Kiểm thử
 - npm run lint
 - npm run build

@@ -4,7 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, BookOpen, CircleAlert, PackageCheck, ThumbsDown, ThumbsUp } from 'lucide-react';
-import BookDiscussion from '../../../components/book-discussion';
+import BookDiscussion from '../../../features/book-discussion/book-discussion';
 import { subscribeSession, getSessionToken, serverSessionToken } from '../../../lib/session';
 import BorrowActions from '../../../components/borrow-actions';
 import { api, formatApiError } from '../../../lib/api';

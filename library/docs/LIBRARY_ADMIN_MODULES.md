@@ -1,7 +1,7 @@
 # Các mục quản trị thư viện
 Sản phẩm -> Sách & tồn kho. Danh mục -> Thể loại sách. Thương hiệu -> Nhà xuất bản (thêm Tác giả). Đơn hàng -> Phiếu mượn và Bán sách & hóa đơn. Người dùng -> Tài khoản. Post -> Bài viết & tin thư viện. Trang đơn -> Trang thông tin. Cấu hình -> Cấu hình thư viện. Menu -> Menu điều hướng. Bổ sung Sách điện tử.
 
-Chạy database/upgrade_library_content_20261029.sql sau khi sao lưu. Bảng mới library_content lưu POST/PAGE/EBOOK/CONFIG/MENU. Không thay đổi bảng sách cũ.
+Cài đặt database bằng file duy nhất `database/library_db.sql`. Xem [hướng dẫn database](DATABASE.md). File khởi tạo sẽ xóa và tạo lại các bảng, cần sao lưu trước khi import; không chạy trên dữ liệu cần giữ.
 Thể loại, tác giả, nhà xuất bản có thêm/sửa; không xóa dữ liệu đang liên kết sách. Nội dung có bản nháp/xuất bản và sửa lại thành ẩn. Mã đường dẫn duy nhất toàn hệ thống.
 Trang thông tin: tạo giới thiệu, chính sách mượn-trả, chính sách mua sách, liên hệ. Chỉ xuất bản thông tin chính thức của nhóm; không sinh chính sách tự động.
 Sách điện tử: chọn đầu sách, nhập văn bản được phép cung cấp, xuất bản để đọc tại /user/read/{slug}; danh sách tại /user/library. Hiện đọc văn bản công khai miễn phí, chưa có PDF/EPUB, bán quyền đọc hoặc DRM.

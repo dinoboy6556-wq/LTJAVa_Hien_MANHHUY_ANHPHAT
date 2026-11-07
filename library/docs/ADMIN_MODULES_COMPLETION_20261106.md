@@ -26,13 +26,7 @@ Menu hỗ trợ /, /books, /books/{id}, /library, /read/{slug}, /cart, /account/
 
 Không thêm bảng/cột. Tái sử dụng sales, sale_items, book_copies, library_content hiện có. Đã nạp 21 bản ghi: 3 EBOOK, 3 POST, 4 PAGE, 6 CONFIG, 5 MENU. Thông tin liên hệ là giá trị mẫu, cần quản trị thay bằng thực tế. Không xóa hay ghi đè nội dung đã có.
 
-Sau khi pull code và chạy backend, từ thư mục gốc:
-
-```powershell
-.\database\seed_library_content.ps1
-```
-
-Script hỏi mật khẩu admin; dữ liệu ở sample_library_content.json. Chạy lại nhận diện slug và bỏ qua, không nhân đôi, không tạo hóa đơn giả. Bộ 20 đầu sách riêng vẫn dùng seed_catalog_20.ps1.
+Cài đặt bằng file duy nhất `database/library_db.sql` theo [hướng dẫn chạy project](../../database/README.md). File chứa đủ 21 nội dung và danh mục sách; import sẽ xóa và tạo lại các bảng, cần sao lưu trước khi dùng.
 
 ## Xác minh bản cập nhật cuối
 

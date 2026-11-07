@@ -1,7 +1,7 @@
 # Giỏ mượn và VNPay sandbox
 
 ## Database
-Dừng backend, sao lưu library_db rồi chạy database/upgrade_vnpay_cart_20261029.sql. Thêm bảng borrow_payments, không xóa dữ liệu. Đã có migration tính năng đọc trước đó thì giữ nguyên.
+Cài đặt database bằng file duy nhất `database/library_db.sql`. Xem [hướng dẫn database](DATABASE.md). File khởi tạo sẽ xóa và tạo lại các bảng, cần sao lưu trước khi import; không chạy trên dữ liệu cần giữ.
 
 ## Cấu hình cần cung cấp
 Đăng ký merchant sandbox VNPay để lấy TmnCode/HashSecret. Không commit hoặc gửi khóa vào chat.
@@ -29,7 +29,7 @@ Tài liệu chính thức: https://sandbox.vnpayment.vn/apis/docs/thanh-toan-pay
 - /user/history chỉ hiển thị phiếu RETURNED. Phiếu đang mượn/trả một phần chỉ ở Sách đang mượn.
 
 ## Hai phương thức thanh toán (29/10/2026)
-Chạy thêm database/upgrade_payment_methods_20261029.sql một lần sau khi sao lưu. Bổ sung method, confirmed_by, confirmed_at vào borrow_payments; giao dịch cũ mặc định VNPAY.
+Cài đặt database bằng file duy nhất `database/library_db.sql`. Xem [hướng dẫn database](DATABASE.md). File khởi tạo sẽ xóa và tạo lại các bảng, cần sao lưu trước khi import; không chạy trên dữ liệu cần giữ.
 - CASH: giỏ tạo một phiếu, phân bổ sách, ghi UNPAID (chưa thu tiền). Không cần khóa VNPay. Admin > Thanh toán mượn > Xác nhận đã thu tiền sau khi thực nhận tiền. Lưu người và thời gian xác nhận; nhấn lặp không ghi nhận hai lần.
 - VNPAY: chuyển khoản/thanh toán ngân hàng qua cổng VNPay đã chọn; giữ luồng xác thực IPN. Không phải chuyển khoản thủ công đến số tài khoản riêng. Admin không được dùng nút thu tiền mặt để xác nhận VNPay.
 - Lưu ý phiếu CASH bắt đầu hạn mượn ngay khi tạo phiếu; chưa có luồng chờ đến nhận sách riêng. Trả sách không tự xóa nghĩa vụ thanh toán.

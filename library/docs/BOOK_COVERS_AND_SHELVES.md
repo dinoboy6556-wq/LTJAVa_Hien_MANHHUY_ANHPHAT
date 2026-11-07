@@ -22,6 +22,6 @@ API POST /api/v1/books/cover-upload chỉ ADMIN/LIBRARIAN, nhận multipart file
 
 Không thêm bảng/cột. Dùng trường books.cover_image_url hiện có. Next.js proxy /images/** tới Spring Boot nên cả trang độc giả và admin dùng cùng URL ảnh.
 
-Nếu đã có sách trong database mà còn trống ảnh, chạy database/update_sample_book_covers.sql trong library_db. Script chỉ gắn bìa minh họa cho ISBN tương ứng khi chưa có ảnh, không ghi đè ảnh tùy chỉnh. Nếu nạp mới 20 sách, sample_catalog_20.json và seed_catalog_20.ps1 đã kèm đường dẫn ảnh.
+Cài đặt database bằng file duy nhất `database/library_db.sql`. Xem [hướng dẫn database](DATABASE.md). File khởi tạo sẽ xóa và tạo lại các bảng, cần sao lưu trước khi import; không chạy trên dữ liệu cần giữ.
 
 Cột Thao tác admin dùng icon, có title khi rê chuột và aria-label cho đọc màn hình/phím Tab. Hộp=kiểm kê/nhập quyển, bút=sửa, thùng rác đỏ=xóa; nhận trả, xác nhận thu và khóa/mở khóa có icon tương ứng. Xác nhận và phân quyền giữ nguyên.
